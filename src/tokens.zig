@@ -81,16 +81,10 @@ pub const Token = struct {
     line: usize,
 
     /// Returns a string representation of the token.
-    pub fn to_string(self: *Token, alloc: std.mem.Allocator) []const u8 {
+    pub fn format(self: Token, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
+        _ = options;
+        _ = fmt;
         const type_str = token_type_to_string(self.type);
-
-        const pos_str = std.fmt.allocPrint(alloc, "({d}..{d})", .{ self.pos.start, self.pos.start + self.pos.size }) catch unreachable;
-        defer alloc.free(pos_str);
-
-        const line_str = std.fmt.allocPrint(alloc, "{d}", .{self.line}) catch unreachable;
-        defer alloc.free(line_str);
-
-        const result = std.fmt.allocPrint(alloc, "{s} at {s} on line {s}", .{ type_str, pos_str, line_str }) catch unreachable;
-        return result;
+        try writer.print("{s} at ({d}..{d}) on line {d}", .{ type_str, self.pos.start, self.pos.start + self.pos.size, self.line });
     }
 };

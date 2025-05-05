@@ -46,9 +46,7 @@ test "basic syntax test" {
     defer lex.deinit();
     try lex.tokenize();
 
-    const str = lex.tokens.items[0].to_string(test_alloc);
-    std.debug.print("tok: {s}\n", .{str});
-    defer test_alloc.free(str);
+    std.debug.print("tok: {any}\n", .{lex.tokens.items[0]});
 
     const expected_tokens = [_]token.TokenType{
         .{ .Identifier = "abcdef" },

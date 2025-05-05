@@ -24,6 +24,11 @@ pub const TokenType = union(enum) {
     GreaterThanOrEqual,
     DoubleEqual,
 
+    Pipe,
+    DoublePipe,
+    Ampersand,
+    DoubleAmpersand,
+
     Comma,
     Dot,
     Semicolon,
@@ -59,6 +64,11 @@ pub fn token_type_to_string(token_type: TokenType) []const u8 {
         .GreaterThanOrEqual => return ">=",
         .DoubleEqual => return "==",
 
+        .Pipe => return "|",
+        .DoublePipe => return "||",
+        .Ampersand => return "&",
+        .DoubleAmpersand => return "&&",
+
         .Comma => return ",",
         .Dot => return ".",
         .Semicolon => return ";",
@@ -80,11 +90,33 @@ pub const Token = struct {
     pos: Span,
     line: usize,
 
-    /// Returns a string representation of the token.
-    pub fn format(self: Token, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
-        _ = options;
-        _ = fmt;
+    pub fn format(self: Token, comptime _: []const u8, _: std.fmt.FormatOptions, writer: anytype) !void {
         const type_str = token_type_to_string(self.type);
-        try writer.print("{s} at ({d}..{d}) on line {d}", .{ type_str, self.pos.start, self.pos.start + self.pos.size, self.line });
+        switch (self.type) {
+            .Identifier => |name| {
+                try writer.print("Ident({s}) at ({d}..{d}) on line {d}", .{
+                    name,
+                    self.pos.start,
+                    self.pos.start + self.pos.size,
+                    self.line,
+                });
+            },
+            .IntLiteral => |val| {
+                try writer.print("IntLiteral({d}) at ({d}..{d}) on line {d}", .{
+                    val,
+                    self.pos.start,
+                    self.pos.start + self.pos.size,
+                    self.line,
+                });
+            },
+            else => {
+                try writer.print("{s} at ({d}..{d}) on line {d}", .{
+                    type_str,
+                    self.pos.start,
+                    self.pos.start + self.pos.size,
+                    self.line,
+                });
+            },
+        }
     }
 };

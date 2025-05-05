@@ -119,6 +119,16 @@ pub const Lexer = struct {
                 try self.add_token(if (matches) .NotEqual else .Bang, Span{ .start = self.start, .size = if (matches) 2 else 1 }, self.line);
             },
 
+            '|' => {
+                const matches = self.match('|');
+                try self.add_token(if (matches) .DoublePipe else .Pipe, Span{ .start = self.start, .size = if (matches) 2 else 1 }, self.line);
+            },
+
+            '&' => {
+                const matches = self.match('&');
+                try self.add_token(if (matches) .DoubleAmpersand else .Ampersand, Span{ .start = self.start, .size = if (matches) 2 else 1 }, self.line);
+            },
+
             '0'...'9' => {
                 try self.make_number();
             },

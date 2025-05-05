@@ -46,8 +46,6 @@ test "basic syntax test" {
     defer lex.deinit();
     try lex.tokenize();
 
-    std.debug.print("tok: {any}\n", .{lex.tokens.items[0]});
-
     const expected_tokens = [_]token.TokenType{
         .{ .Identifier = "abcdef" },
         .NotEqual,
@@ -64,9 +62,11 @@ test "basic syntax test" {
         .Eof,
     };
 
+    std.debug.print("Tokens(\n\t{s}\n):\n", .{source});
     var actual_tokens: [expected_tokens.len]token.TokenType = undefined;
     for (lex.tokens.items, 0..) |tok_, i| {
         actual_tokens[i] = tok_.type;
+        std.debug.print("   > {s}\n", .{lex.tokens.items[i]});
     }
 
     // try std.testing.expectEqual(expected_tokens, actual_tokens);
@@ -82,5 +82,45 @@ test "basic syntax test" {
         // You could also test pos and line here if desired
         // try std.testing.expectEqual(expected_token.pos, actual_token.pos);
         // try std.testing.expectEqual(expected_token.line, actual_token.line);
+    }
+}
+
+test "actual syntax test" {
+    const test_alloc = std.testing.allocator;
+
+    const source = "const a = 123 + 420 - 69; \n a == 1 && b == 2";
+    var lex = try lexer.Lexer.init(source, test_alloc);
+    defer lex.deinit();
+    try lex.tokenize();
+
+    const expected_tokens = [_]token.TokenType{
+        .{ .Identifier = "const" },
+        .{ .Identifier = "a" },
+        .Equal,
+        .{ .IntLiteral = 123 },
+        .Plus,
+        .{ .IntLiteral = 420 },
+        .Minus,
+        .{ .IntLiteral = 69 },
+        .Semicolon,
+        .{ .Identifier = "a" },
+        .DoubleEqual,
+        .{ .IntLiteral = 1 },
+        .DoubleAmpersand,
+        .{ .Identifier = "b" },
+        .DoubleEqual,
+        .{ .IntLiteral = 2 },
+        .Eof,
+    };
+
+    std.debug.print("Tokens(\n\t{s}\n):\n", .{source});
+    var actual_tokens: [expected_tokens.len]token.TokenType = undefined;
+    for (lex.tokens.items, 0..) |tok_, i| {
+        actual_tokens[i] = tok_.type;
+        std.debug.print("   > {s}\n", .{lex.tokens.items[i]});
+    }
+
+    for (lex.tokens.items, expected_tokens) |actual_token, expected_token| {
+        try std.testing.expectEqualDeep(expected_token, actual_token.type);
     }
 }

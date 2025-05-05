@@ -6,7 +6,7 @@ const err = @import("errors.zig");
 const Token = token.Token;
 const TokenType = token.TokenType;
 const Span = token.Span;
-const LexerError = err.LexerError;
+const LexerError = err.LexerErrorType;
 
 pub const Lexer = struct {
     source: []const u8,
@@ -74,7 +74,7 @@ pub const Lexer = struct {
         try self.tokens.append(tok);
     }
 
-    fn make_token(self: *Lexer) anyerror!void {
+    fn make_token(self: *Lexer) !void {
         const c = self.advance();
 
         switch (c) {
@@ -148,6 +148,17 @@ pub const Lexer = struct {
             try self.make_token();
         }
         try self.add_token(.Eof, Span{ .start = self.start, .size = 0 }, self.line);
+    }
+
+    pub fn dummy(self: *Lexer, idx: usize) err.LexerResult {
+        return err.LexerResult{
+            .err = .{
+                .type = LexerError.InvalidCharacter,
+                .token = self.tokens.items[idx],
+                .message = "Dummy error",
+                .source = self.source,
+            },
+        };
     }
 
     pub fn deinit(self: *Lexer) void {

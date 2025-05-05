@@ -124,3 +124,21 @@ test "actual syntax test" {
         try std.testing.expectEqualDeep(expected_token, actual_token.type);
     }
 }
+
+test "error test" {
+    const test_alloc = std.testing.allocator;
+
+    const source = "const a = 123 + 420 - 69; \na == 1 && b == 2;";
+    var lex = try lexer.Lexer.init(source, test_alloc);
+    defer lex.deinit();
+    try lex.tokenize();
+
+    const res = lex.dummy(10);
+
+    switch (res) {
+        .ok => {},
+        .err => |err| {
+            std.debug.print("{}\n", .{err});
+        },
+    }
+}

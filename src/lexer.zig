@@ -1,5 +1,6 @@
 const std = @import("std");
 const token = @import("tokens.zig");
+const utils = @import("utils.zig");
 
 const Token = token.Token;
 const TokenType = token.TokenType;
@@ -27,6 +28,22 @@ pub const Lexer = struct {
         return c;
     }
 
+    fn peek(self: *Lexer) u8 {
+        if (self.is_at_end()) {
+            return 0;
+        }
+        return self.source[self.current];
+    }
+
+    fn make_number(self: *Lexer) !void {
+        while (utils.is_digit(self.peek())) {
+            _ = self.advance();
+        }
+        const i = try std.fmt.parseInt(i64, self.source[self.start..self.current], 10);
+
+        try self.add_token(.{ .IntLiteral = i }, Span{ .start = self.start, .size = self.current - self.start }, self.line);
+    }
+
     fn add_token(self: *Lexer, token_type: TokenType, pos: Span, line: usize) !void {
         const tok = Token{
             .type = token_type,
@@ -42,7 +59,10 @@ pub const Lexer = struct {
         switch (c) {
             ' ', '\r', '\t' => {},
 
-            '\n' => self.line += 1,
+            '\n' => {
+                self.line += 1;
+                self.start = 0;
+            },
 
             '+' => try self.add_token(.Plus, Span{ .start = self.start, .size = 1 }, self.line),
             '-' => try self.add_token(.Minus, Span{ .start = self.start, .size = 1 }, self.line),
@@ -55,6 +75,10 @@ pub const Lexer = struct {
             ']' => try self.add_token(.RSquare, Span{ .start = self.start, .size = 1 }, self.line),
             '{' => try self.add_token(.LBrace, Span{ .start = self.start, .size = 1 }, self.line),
             '}' => try self.add_token(.RBrace, Span{ .start = self.start, .size = 1 }, self.line),
+
+            '0'...'9' => {
+                try self.make_number();
+            },
             else => {},
         }
     }

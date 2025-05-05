@@ -9,7 +9,7 @@ pub fn main() !void {
     //     .line = 1,
     // };
 
-    var lex = lexer.Lexer.init("+-\n[]") catch |err| {
+    var lex = lexer.Lexer.init("123 + 420 - 69 = \n 123456") catch |err| {
         std.debug.print("Error initializing lexer: {}\n", .{err});
         return err;
     };

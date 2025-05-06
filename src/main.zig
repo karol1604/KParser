@@ -1,6 +1,8 @@
 const std = @import("std");
 const token = @import("tokens.zig");
 const lexer = @import("lexer.zig");
+const parser = @import("parser.zig");
+const ast = @import("ast.zig");
 
 pub fn main() !void {
     // const tok = token.Token{
@@ -133,7 +135,7 @@ test "error test" {
     defer lex.deinit();
     try lex.tokenize();
 
-    const res = lex.dummy(10);
+    const res = lex.dummy(12);
 
     switch (res) {
         .ok => {},
@@ -141,4 +143,21 @@ test "error test" {
             std.debug.print("{}\n", .{err});
         },
     }
+}
+
+test "parser test" {
+    const test_alloc = std.testing.allocator;
+
+    const source = "1";
+
+    var lex = try lexer.Lexer.init(source, test_alloc);
+    defer lex.deinit();
+    try lex.tokenize();
+
+    var p = parser.Parser.init(lex.tokens.items, test_alloc);
+    defer p.deinit();
+
+    _ = try p.parse_expression(.Lowest);
+
+    // Parse the tokens
 }

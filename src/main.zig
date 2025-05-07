@@ -152,9 +152,7 @@ test "parse int literal" {
     defer arena.deinit();
     const arena_alloc = arena.allocator();
 
-    // const source = "13 + 12 / (1 + 2 * 6) == 1";
-    // const source = "((2 + 3) * 4 <= 14 || 1 != 1) && 2 == 1";
-    const source = "-1 + 2 * (-3)";
+    const source = "(1 + 2 * (-1) == 12) || ((2 + 3) * 4 <= 14)";
 
     var lex = try lexer.Lexer.init(source, arena_alloc);
     defer lex.deinit();
@@ -163,26 +161,6 @@ test "parse int literal" {
     var p = parser.Parser.init(lex.tokens.items, arena_alloc);
     const t = try p.parse();
     defer t.deinit();
-    // defer {
-    //     for (t.items) |expr| {
-    //         utils.deinit_expression_tree(test_alloc, expr);
-    //         // test_alloc.destroy(expr);
-    //     }
-    // }
 
     utils.pretty_print_expression(t.items[0].*);
-
-    // const expected = [_]ast.Expression{
-    //     .{ .IntLiteral = 42069 },
-    // };
-    //
-    // for (t.items, 0..) |expr, i| {
-    //     std.debug.print("Parsed expression: {any}\n", .{expr});
-    //     try std.testing.expectEqualDeep(expected[i], expr);
-    // }
-
-    //
-    // try std.testing.expectEqual(expected, t.items);
-
-    // Parse the tokens
 }

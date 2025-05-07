@@ -3,6 +3,7 @@ const token = @import("tokens.zig");
 const lexer = @import("lexer.zig");
 const parser = @import("parser.zig");
 const ast = @import("ast.zig");
+const utils = @import("utils.zig");
 
 pub fn main() !void {
     // const tok = token.Token{
@@ -148,7 +149,7 @@ test "error test" {
 test "parse int literal" {
     const test_alloc = std.testing.allocator;
 
-    const source = "42069";
+    const source = "34 + 35";
 
     var lex = try lexer.Lexer.init(source, test_alloc);
     defer lex.deinit();
@@ -158,9 +159,27 @@ test "parse int literal" {
     defer p.deinit();
 
     const t = try p.parse();
-
-    std.debug.print("Parsed tokens: {any}\n", .{t.items});
     defer t.deinit();
+    defer {
+        for (t.items) |expr| {
+            utils.deinit_expression_tree(test_alloc, expr);
+            // test_alloc.destroy(expr);
+        }
+    }
+
+    std.debug.print("{any}\n", .{t.items[0].*});
+
+    // const expected = [_]ast.Expression{
+    //     .{ .IntLiteral = 42069 },
+    // };
+    //
+    // for (t.items, 0..) |expr, i| {
+    //     std.debug.print("Parsed expression: {any}\n", .{expr});
+    //     try std.testing.expectEqualDeep(expected[i], expr);
+    // }
+
+    //
+    // try std.testing.expectEqual(expected, t.items);
 
     // Parse the tokens
 }

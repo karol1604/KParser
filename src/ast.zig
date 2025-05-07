@@ -7,13 +7,13 @@ pub const Expression = union(enum) {
 
     Unary: struct {
         operator: UnaryOperator,
-        epxression: *Expression,
+        epxression: *const Expression,
     },
 
     Binary: struct {
-        left: *Expression,
+        left: *const Expression,
         operator: BinaryOperator,
-        right: *Expression,
+        right: *const Expression,
     },
 };
 

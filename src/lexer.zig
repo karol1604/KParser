@@ -4,6 +4,7 @@ const utils = @import("utils.zig");
 const err = @import("errors.zig");
 
 const Token = token.Token;
+const Keywords = token.Keywords;
 const TokenType = token.TokenType;
 const Span = token.Span;
 const LexerError = err.LexerErrorType;
@@ -62,6 +63,13 @@ pub const Lexer = struct {
             _ = self.advance();
         }
         const ident = self.source[self.start..self.current];
+
+        const tok_type = Keywords.get(ident);
+
+        if (tok_type) |typ| {
+            try self.add_token(typ, Span{ .start = self.start, .size = self.current - self.start }, self.line);
+            return;
+        }
         try self.add_token(.{ .Identifier = ident }, Span{ .start = self.start, .size = self.current - self.start }, self.line);
     }
 

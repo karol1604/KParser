@@ -5,6 +5,8 @@ pub const Expression = union(enum) {
 
     Identifier: []const u8,
 
+    BoolLiteral: bool,
+
     Unary: struct {
         operator: UnaryOperator,
         right: *const Expression,

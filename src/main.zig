@@ -91,7 +91,7 @@ test "basic syntax test" {
 test "actual syntax test" {
     const test_alloc = std.testing.allocator;
 
-    const source = "const a = 123 + 420 - 69;\na == 1 && b == 2";
+    const source = "const a = 123 + 420 - 69;\na == 1 && b == 2;\nfalse";
     var lex = try lexer.Lexer.init(source, test_alloc);
     defer lex.deinit();
     try lex.tokenize();
@@ -113,6 +113,8 @@ test "actual syntax test" {
         .{ .Identifier = "b" },
         .DoubleEqual,
         .{ .IntLiteral = 2 },
+        .Semicolon,
+        .False,
         .Eof,
     };
 
@@ -152,7 +154,7 @@ test "parse int literal" {
     defer arena.deinit();
     const arena_alloc = arena.allocator();
 
-    const source = "(1 + 2 * (-1) == 12) || ((2 + 3) * 4 <= 14)";
+    const source = "1+2 == true; 3^2 == false";
 
     var lex = try lexer.Lexer.init(source, arena_alloc);
     defer lex.deinit();
@@ -162,5 +164,12 @@ test "parse int literal" {
     const t = try p.parse();
     defer t.deinit();
 
-    utils.pretty_print_expression(t.items[0].*);
+    std.debug.print("Expressions:\n", .{});
+    std.debug.print("---------\n", .{});
+
+    for (t.items) |item| {
+        std.debug.print("   ", .{});
+        utils.pretty_print_expression(item.*);
+        std.debug.print("---------\n", .{});
+    }
 }

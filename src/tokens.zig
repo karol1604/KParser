@@ -29,6 +29,9 @@ pub const TokenType = union(enum) {
     Ampersand,
     DoubleAmpersand,
 
+    True,
+    False,
+
     Comma,
     Dot,
     Semicolon,
@@ -38,6 +41,11 @@ pub const TokenType = union(enum) {
 
     Eof,
 };
+
+pub const Keywords = std.StaticStringMap(TokenType).initComptime(.{
+    .{ "true", .True },
+    .{ "false", .False },
+});
 
 pub fn token_type_to_string(token_type: TokenType) []const u8 {
     switch (token_type) {
@@ -68,6 +76,9 @@ pub fn token_type_to_string(token_type: TokenType) []const u8 {
         .DoublePipe => return "||",
         .Ampersand => return "&",
         .DoubleAmpersand => return "&&",
+
+        .True => return "true",
+        .False => return "false",
 
         .Comma => return ",",
         .Dot => return ".",

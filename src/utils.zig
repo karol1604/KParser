@@ -74,6 +74,9 @@ fn prettyPrintRec(
         .Identifier => |name| {
             std.debug.print("Identifier {s}\n", .{name});
         },
+        .BoolLiteral => |val| {
+            std.debug.print("BoolLiteral {s}\n", .{if (val) "true" else "false"});
+        },
         .Unary => |u| {
             const op_str = switch (u.operator) {
                 .Plus => "+",

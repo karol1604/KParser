@@ -145,10 +145,10 @@ test "error test" {
     }
 }
 
-test "parser test" {
+test "parse int literal" {
     const test_alloc = std.testing.allocator;
 
-    const source = "1";
+    const source = "42069";
 
     var lex = try lexer.Lexer.init(source, test_alloc);
     defer lex.deinit();
@@ -157,7 +157,10 @@ test "parser test" {
     var p = parser.Parser.init(lex.tokens.items, test_alloc);
     defer p.deinit();
 
-    _ = try p.parse_expression(.Lowest);
+    const t = try p.parse();
+
+    std.debug.print("Parsed tokens: {any}\n", .{t.items});
+    defer t.deinit();
 
     // Parse the tokens
 }

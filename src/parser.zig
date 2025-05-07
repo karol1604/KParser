@@ -44,6 +44,7 @@ pub const Parser = struct {
     fn parse_expression(self: *Parser, prec: Precedence) anyerror!*Expression {
         var expr = switch (self.current_token().type) {
             .IntLiteral => try self.parse_int_literal(),
+            .LParen => try self.parse_group_expression(),
             else => return error.NoParseFunctionForTokenType,
         };
 
@@ -52,14 +53,37 @@ pub const Parser = struct {
                 .IntLiteral => return error.ConsecutiveInts, // TODO: this condition is actually never reached, fix this bug! (potentially replace > with >= but idk)
                 .Plus => expr = try self.parse_binary_expression(expr, .Plus, .Sum),
                 .Minus => expr = try self.parse_binary_expression(expr, .Minus, .Sum),
+
                 .Star => expr = try self.parse_binary_expression(expr, .Multiply, .Product),
                 .Slash => expr = try self.parse_binary_expression(expr, .Divide, .Product),
+
+                .DoubleEqual => expr = try self.parse_binary_expression(expr, .Equal, .Equality),
+                .NotEqual => expr = try self.parse_binary_expression(expr, .NotEqual, .Equality),
+
+                .LessThan => expr = try self.parse_binary_expression(expr, .LessThan, .Comparison),
+                .GreaterThan => expr = try self.parse_binary_expression(expr, .GreaterThan, .Comparison),
+                .LessThanOrEqual => expr = try self.parse_binary_expression(expr, .LessThanOrEqual, .Comparison),
+                .GreaterThanOrEqual => expr = try self.parse_binary_expression(expr, .GreaterThanOrEqual, .Comparison),
+
+                .DoubleAmpersand => expr = try self.parse_binary_expression(expr, .LogicalAnd, .Logical),
+                .DoublePipe => expr = try self.parse_binary_expression(expr, .LogicalOr, .Logical),
+
                 .Caret => expr = try self.parse_binary_expression(expr, .Exponent, .Exponent),
                 .Eof => return expr,
                 else => return error.InvalidOperator,
             }
         }
 
+        return expr;
+    }
+
+    fn parse_group_expression(self: *Parser) !*Expression {
+        self.advance(); // consume '('
+        const expr = try self.parse_expression(.Lowest);
+        if (self.current_token().type != .RParen) {
+            return error.ExpectedRParen;
+        }
+        self.advance(); // consume ')'
         return expr;
     }
 
@@ -104,10 +128,25 @@ pub const Parser = struct {
         const prec: Precedence = switch (self.current_token().type) {
             .Plus => .Sum,
             .Minus => .Sum,
+
+            .DoubleEqual => .Equality,
+            .NotEqual => .Equality,
+
+            .LessThan => .Comparison,
+            .GreaterThan => .Comparison,
+            .LessThanOrEqual => .Comparison,
+            .GreaterThanOrEqual => .Comparison,
+
+            .DoubleAmpersand => .Logical,
+            .DoublePipe => .Logical,
+
             .Star => .Product,
             .Slash => .Product,
+
             .Caret => .Exponent,
+
             .LParen => .Group,
+
             else => .Lowest,
         };
 

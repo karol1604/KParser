@@ -149,7 +149,9 @@ test "error test" {
 test "parse int literal" {
     const test_alloc = std.testing.allocator;
 
-    const source = "13 + 12 / 2 * 6";
+    // const source = "13 + 12 / (1 + 2 * 6) == 1";
+    // const source = "((2 + 3) * 4 <= 14 || 1 != 1) && 2 == 1";
+    const source = "1 < 1 == 0";
 
     var lex = try lexer.Lexer.init(source, test_alloc);
     defer lex.deinit();
@@ -166,8 +168,6 @@ test "parse int literal" {
             // test_alloc.destroy(expr);
         }
     }
-
-    std.debug.print("{any}\n", .{t.items[0].*});
 
     utils.pretty_print_expression(t.items[0].*);
 

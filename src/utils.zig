@@ -158,12 +158,16 @@ fn prettyPrint(expr: ast.Expression, indent: usize) void {
                 .Divide => "/",
                 .Multiply => "*",
                 .Exponent => "^",
+
                 .Equal => "==",
                 .NotEqual => "!=",
                 .LessThan => "<",
                 .GreaterThan => ">",
                 .LessThanOrEqual => "<=",
                 .GreaterThanOrEqual => ">=",
+
+                .LogicalOr => "||",
+                .LogicalAnd => "&&",
             };
             std.debug.print("Binary {s}\n", .{op_str});
             // recurse on LHS and RHS

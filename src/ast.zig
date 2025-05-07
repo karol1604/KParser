@@ -29,18 +29,25 @@ pub const BinaryOperator = union(enum) {
     Divide,
     Multiply,
     Exponent,
+
     Equal,
     NotEqual,
     LessThan,
     GreaterThan,
     LessThanOrEqual,
     GreaterThanOrEqual,
+
+    LogicalOr,
+    LogicalAnd,
 };
 
 pub const Precedence = enum(u8) {
     Lowest = 0,
-    Sum = 1,
-    Product = 2,
-    Exponent = 3,
-    Group = 4,
+    Logical,
+    Equality,
+    Comparison,
+    Sum,
+    Product,
+    Exponent,
+    Group,
 };

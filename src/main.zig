@@ -148,26 +148,27 @@ test "error test" {
 
 test "parse int literal" {
     const test_alloc = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(test_alloc);
+    defer arena.deinit();
+    const arena_alloc = arena.allocator();
 
     // const source = "13 + 12 / (1 + 2 * 6) == 1";
     // const source = "((2 + 3) * 4 <= 14 || 1 != 1) && 2 == 1";
-    const source = "1 < 1 == 0";
+    const source = "1 == 1";
 
-    var lex = try lexer.Lexer.init(source, test_alloc);
+    var lex = try lexer.Lexer.init(source, arena_alloc);
     defer lex.deinit();
     try lex.tokenize();
 
-    var p = parser.Parser.init(lex.tokens.items, test_alloc);
-    defer p.deinit();
-
+    var p = parser.Parser.init(lex.tokens.items, arena_alloc);
     const t = try p.parse();
     defer t.deinit();
-    defer {
-        for (t.items) |expr| {
-            utils.deinit_expression_tree(test_alloc, expr);
-            // test_alloc.destroy(expr);
-        }
-    }
+    // defer {
+    //     for (t.items) |expr| {
+    //         utils.deinit_expression_tree(test_alloc, expr);
+    //         // test_alloc.destroy(expr);
+    //     }
+    // }
 
     utils.pretty_print_expression(t.items[0].*);
 

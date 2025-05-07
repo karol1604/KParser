@@ -13,6 +13,7 @@ pub fn is_alpha_numeric(c: u8) bool {
     return is_alpha(c) or is_digit(c);
 }
 
+// we probably don't need this function
 /// Recursively deinits an epxression tree
 pub fn deinit_expression_tree(alloc: std.mem.Allocator, root_expr: *ast.Expression) void {
     switch (root_expr.*) {
@@ -24,6 +25,7 @@ pub fn deinit_expression_tree(alloc: std.mem.Allocator, root_expr: *ast.Expressi
             deinit_expression_tree(alloc, @constCast(unary_expr.epxression));
         },
         .Binary => |*binary_expr| {
+            std.debug.print(">>>>>>>>>>>>>>>>> Deinit binary\n", .{});
             // Need to cast away const for deallocation if you are sure
             // these pointers are uniquely owned and being destroyed.
             // A better design might be to have *Expression for children
@@ -35,92 +37,10 @@ pub fn deinit_expression_tree(alloc: std.mem.Allocator, root_expr: *ast.Expressi
     alloc.destroy(root_expr);
 }
 
-// pub fn pretty_print_expression(expr: ast.Expression, indent: ?[]const u8) void {
-//     const ind = indent orelse "";
-//
-//     std.debug.print("{s}{s}", .{ ind, @tagName(expr) });
-//
-//     switch (expr) {
-//         .IntLiteral => |i| {
-//             std.debug.print(" {d}\n", .{i});
-//         },
-//         .Identifier => |id| {
-//             std.debug.print(" {s}\n", .{id});
-//         },
-//         .Unary => |_| {},
-//         .Binary => |binary_expr| {
-//             pretty_print_expression(binary_expr.left.*, indent ++ "    ");
-//             pretty_print_expression(binary_expr.right.*, indent ++ "    ");
-//         },
-//     }
-// }
-
+/// Pretty prints an expression tree
 pub fn pretty_print_expression(root: ast.Expression) void {
     prettyPrint(root, 0);
 }
-
-// fn prettyPrint(expr: ast.Expression, comptime indent: []const u8, comptime isLast: bool) void {
-//     const branch = if (isLast) "└── " else "├── ";
-//     const isRoot = indent.len == 0;
-//
-//     // 1) Print this node
-//     switch (expr) {
-//         .IntLiteral => |val| {
-//             if (isRoot) {
-//                 std.debug.print("IntLiteral {d}\n", .{val});
-//             } else {
-//                 std.debug.print("{s}{s}IntLiteral {d}\n", .{ indent, branch, val });
-//             }
-//         },
-//         .Identifier => |name| {
-//             if (isRoot) {
-//                 std.debug.print("Identifier {s}\n", .{name});
-//             } else {
-//                 std.debug.print("{s}{s}Identifier {s}\n", .{ indent, branch, name });
-//             }
-//         },
-//         .Unary => |u| {
-//             const op = switch (u.operator) {
-//                 .Plus => "+",
-//                 .Minus => "-",
-//                 .Not => "!",
-//             };
-//             if (isRoot) {
-//                 std.debug.print("Unary {s}\n", .{op});
-//             } else {
-//                 std.debug.print("{s}{s}Unary {s}\n", .{ indent, branch, op });
-//             }
-//             // build the indent for children
-//             const nextIndent = indent ++ (if (isLast) "    " else "│   ");
-//             // Unary has exactly one child, treat it as last
-//             prettyPrint(u.epxression.*, nextIndent, true);
-//         },
-//         .Binary => |b| {
-//             const op = switch (b.operator) {
-//                 .Plus => "+",
-//                 .Minus => "-",
-//                 .Multiply => "*",
-//                 .Divide => "/",
-//                 .Exponent => "^",
-//                 .Equal => "==",
-//                 .NotEqual => "!=",
-//                 .LessThan => "<",
-//                 .GreaterThan => ">",
-//                 .LessThanOrEqual => "<=",
-//                 .GreaterThanOrEqual => ">=",
-//             };
-//             if (isRoot) {
-//                 std.debug.print("Binary {s}\n", .{op});
-//             } else {
-//                 std.debug.print("{s}{s}Binary {s}\n", .{ indent, branch, op });
-//             }
-//             const nextIndent = indent ++ (if (isLast) "    " else "│   ");
-//             // Left child is not last, right child is last
-//             prettyPrint(b.left.*, nextIndent, false);
-//             prettyPrint(b.right.*, nextIndent, true);
-//         },
-//     }
-// }
 
 fn prettyPrint(expr: ast.Expression, indent: usize) void {
     // └──

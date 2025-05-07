@@ -1,6 +1,7 @@
 const std = @import("std");
 const token = @import("tokens.zig");
 const ast = @import("ast.zig");
+const utils = @import("utils.zig");
 
 const Token = token.Token;
 const TokenType = token.TokenType;
@@ -49,6 +50,7 @@ pub const Parser = struct {
         };
 
         while (self.current_prec() > @intFromEnum(prec)) {
+            // we probably can abstrct this away into a single function call
             switch (self.current_token().type) {
                 .IntLiteral => return error.ConsecutiveInts, // TODO: this condition is actually never reached, fix this bug! (potentially replace > with >= but idk)
                 .Plus => expr = try self.parse_binary_expression(expr, .Plus, .Sum),
@@ -123,11 +125,10 @@ pub const Parser = struct {
         return self.tokens[self.current];
     }
 
-    fn current_prec(self: *Parser) u8 {
-        // gotta assign this to a variable bc poor little compiler gets confused ;(
-        const prec: Precedence = switch (self.current_token().type) {
-            .Plus => .Sum,
-            .Minus => .Sum,
+    fn get_token_prec(_: *Parser, token_type: TokenType) Precedence {
+        return switch (token_type) {
+            .DoubleAmpersand => .Logical,
+            .DoublePipe => .Logical,
 
             .DoubleEqual => .Equality,
             .NotEqual => .Equality,
@@ -137,8 +138,8 @@ pub const Parser = struct {
             .LessThanOrEqual => .Comparison,
             .GreaterThanOrEqual => .Comparison,
 
-            .DoubleAmpersand => .Logical,
-            .DoublePipe => .Logical,
+            .Plus => .Sum,
+            .Minus => .Sum,
 
             .Star => .Product,
             .Slash => .Product,
@@ -147,9 +148,11 @@ pub const Parser = struct {
 
             .LParen => .Group,
 
-            else => .Lowest,
+            else => Precedence.Lowest,
         };
+    }
 
-        return @intFromEnum(prec);
+    fn current_prec(self: *Parser) u8 {
+        return @intFromEnum(self.get_token_prec(self.current_token().type));
     }
 };

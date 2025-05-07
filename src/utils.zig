@@ -69,7 +69,7 @@ fn prettyPrint(expr: ast.Expression, indent: usize) void {
             };
             std.debug.print("Unary {s}\n", .{op_str});
             // recurse on the single child
-            prettyPrint(u.epxression.*, indent + 1);
+            prettyPrint(u.right.*, indent + 1);
         },
         .Binary => |b| {
             const op_str = switch (b.operator) {

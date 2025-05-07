@@ -7,7 +7,7 @@ pub const Expression = union(enum) {
 
     Unary: struct {
         operator: UnaryOperator,
-        epxression: *const Expression,
+        right: *const Expression,
     },
 
     Binary: struct {
@@ -49,5 +49,6 @@ pub const Precedence = enum(u8) {
     Sum,
     Product,
     Exponent,
+    Prefix,
     Group,
 };

@@ -9,6 +9,7 @@ const TokenType = token.TokenType;
 const Precedence = ast.Precedence;
 const Expression = ast.Expression;
 const BinaryOperator = ast.BinaryOperator;
+const UnaryOperator = ast.UnaryOperator;
 
 pub const Parser = struct {
     tokens: []const Token,
@@ -46,6 +47,9 @@ pub const Parser = struct {
         var expr = switch (self.current_token().type) {
             .IntLiteral => try self.parse_int_literal(),
             .LParen => try self.parse_group_expression(),
+            .Plus => try self.parse_unary_expression(.Plus),
+            .Minus => try self.parse_unary_expression(.Minus),
+            .Bang => try self.parse_unary_expression(.Not),
             else => return error.NoParseFunctionForTokenType,
         };
 
@@ -79,6 +83,16 @@ pub const Parser = struct {
         return expr;
     }
 
+    fn parse_unary_expression(self: *Parser, op: UnaryOperator) !*Expression {
+        self.advance();
+        const rhs = try self.parse_expression(.Prefix);
+
+        return self.make_expression_pointer(.{ .Unary = .{
+            .operator = op,
+            .right = rhs,
+        } });
+    }
+
     fn parse_group_expression(self: *Parser) !*Expression {
         self.advance(); // consume '('
         const expr = try self.parse_expression(.Lowest);
@@ -91,6 +105,10 @@ pub const Parser = struct {
 
     fn parse_binary_expression(self: *Parser, lhs: *Expression, op: BinaryOperator, prec: Precedence) !*Expression {
         self.advance();
+
+        if (self.current_token().type == .Plus or self.current_token().type == .Minus or self.current_token().type == .Bang) {
+            return error.UnexpectedUnaryOperator;
+        }
         const rhs = try self.parse_expression(prec);
 
         return self.make_expression_pointer(.{ .Binary = .{

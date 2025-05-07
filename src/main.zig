@@ -91,7 +91,7 @@ test "basic syntax test" {
 test "actual syntax test" {
     const test_alloc = std.testing.allocator;
 
-    const source = "const a = 123 + 420 - 69; \n a == 1 && b == 2";
+    const source = "const a = 123 + 420 - 69;\na == 1 && b == 2";
     var lex = try lexer.Lexer.init(source, test_alloc);
     defer lex.deinit();
     try lex.tokenize();
@@ -116,7 +116,7 @@ test "actual syntax test" {
         .Eof,
     };
 
-    std.debug.print("Tokens(\n\t{s}\n):\n", .{source});
+    std.debug.print("Tokens(\n{s}\n):\n", .{source});
     var actual_tokens: [expected_tokens.len]token.TokenType = undefined;
     for (lex.tokens.items, 0..) |tok_, i| {
         actual_tokens[i] = tok_.type;
@@ -131,7 +131,7 @@ test "actual syntax test" {
 test "error test" {
     const test_alloc = std.testing.allocator;
 
-    const source = "const a = 123 + 420 - 69; \na == 1 && b == 2;";
+    const source = "const a = 123 + 420 - 69;\na == 1 && b == 2;";
     var lex = try lexer.Lexer.init(source, test_alloc);
     defer lex.deinit();
     try lex.tokenize();
@@ -154,7 +154,7 @@ test "parse int literal" {
 
     // const source = "13 + 12 / (1 + 2 * 6) == 1";
     // const source = "((2 + 3) * 4 <= 14 || 1 != 1) && 2 == 1";
-    const source = "1 == 1";
+    const source = "-1 + 2 * (-3)";
 
     var lex = try lexer.Lexer.init(source, arena_alloc);
     defer lex.deinit();

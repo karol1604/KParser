@@ -149,7 +149,7 @@ test "error test" {
 test "parse int literal" {
     const test_alloc = std.testing.allocator;
 
-    const source = "34 + 35";
+    const source = "34 + 35 * 12";
 
     var lex = try lexer.Lexer.init(source, test_alloc);
     defer lex.deinit();
@@ -167,7 +167,7 @@ test "parse int literal" {
         }
     }
 
-    std.debug.print("{any}\n", .{t.items[0].*});
+    std.debug.print("{any}\n", .{t.items[0].*.Binary.right});
 
     // const expected = [_]ast.Expression{
     //     .{ .IntLiteral = 42069 },

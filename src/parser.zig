@@ -51,6 +51,10 @@ pub const Parser = struct {
             switch (self.current_token().type) {
                 .IntLiteral => return error.ConsecutiveInts, // TODO: this condition is actually never reached, fix this bug! (potentially replace > with >= but idk)
                 .Plus => expr = try self.parse_binary_expression(expr, .Plus, .Sum),
+                .Minus => expr = try self.parse_binary_expression(expr, .Minus, .Sum),
+                .Star => expr = try self.parse_binary_expression(expr, .Multiply, .Product),
+                .Slash => expr = try self.parse_binary_expression(expr, .Divide, .Product),
+                .Caret => expr = try self.parse_binary_expression(expr, .Exponent, .Exponent),
                 .Eof => return expr,
                 else => return error.InvalidOperator,
             }

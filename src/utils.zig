@@ -13,11 +13,12 @@ pub fn is_alpha_numeric(c: u8) bool {
     return is_alpha(c) or is_digit(c);
 }
 
+/// Recursively deinits an epxression tree
 pub fn deinit_expression_tree(alloc: std.mem.Allocator, root_expr: *ast.Expression) void {
     switch (root_expr.*) {
         .IntLiteral => {}, // No children to deallocate
         .Identifier => {}, // No children to deallocate
-        .Unary => |unary_expr| {
+        .Unary => |*unary_expr| {
             // std.debug.panic(">>>>>>>>>>>> {any}\n", .{unary_expr});
             // Assuming 'epxression' is a typo and should be 'expression'
             deinit_expression_tree(alloc, @constCast(unary_expr.epxression));

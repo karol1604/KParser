@@ -106,6 +106,7 @@ pub const Parser = struct {
     fn parse_binary_expression(self: *Parser, lhs: *Expression, op: BinaryOperator, prec: Precedence) !*Expression {
         self.advance();
 
+        // TODO: this is a hack, we should change this function's implementation. Maybe add a `allow_prefix` parameter?
         if (self.current_token().type == .Plus or self.current_token().type == .Minus or self.current_token().type == .Bang) {
             return error.UnexpectedUnaryOperator;
         }

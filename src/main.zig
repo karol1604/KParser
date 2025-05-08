@@ -154,8 +154,9 @@ test "parse int literal" {
     defer arena.deinit();
     const arena_alloc = arena.allocator();
 
-    const source = "(5 + 3 * (10 - 2) / 4 == 7) && (9 >= 8 || 6 < 5)";
+    // const source = "(5 + 3 * (10 - 2) / 4 == 7) && (9 >= 8 || 6 < 5)";
     // const source = "2 ^ 3 ^ 4";
+    const source = "let a = (2 + 4) * 5";
 
     var lex = try lexer.Lexer.init(source, arena_alloc);
     defer lex.deinit();

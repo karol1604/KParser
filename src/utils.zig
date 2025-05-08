@@ -42,6 +42,11 @@ const MAX_DEPTH = 64;
 pub fn pretty_print_statement(stmt: ast.Statement) !void {
     try switch (stmt) {
         .ExpressionStatement => |expr| pretty_print_expression(expr.*),
+        .LetStatement => |statement| {
+            std.debug.print("LetStatement {s} =\n", .{statement.name});
+            std.debug.print("   ", .{});
+            pretty_print_expression(statement.value.*);
+        },
         else => error.NoPrettyPrintForStatementType,
     };
 }

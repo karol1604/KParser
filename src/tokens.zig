@@ -32,6 +32,8 @@ pub const TokenType = union(enum) {
     True,
     False,
 
+    Let,
+
     Comma,
     Dot,
     Semicolon,
@@ -45,6 +47,7 @@ pub const TokenType = union(enum) {
 pub const Keywords = std.StaticStringMap(TokenType).initComptime(.{
     .{ "true", .True },
     .{ "false", .False },
+    .{ "let", .Let },
 });
 
 pub fn token_type_to_string(token_type: TokenType) []const u8 {
@@ -79,6 +82,8 @@ pub fn token_type_to_string(token_type: TokenType) []const u8 {
 
         .True => return "true",
         .False => return "false",
+
+        .Let => return "let",
 
         .Comma => return ",",
         .Dot => return ".",

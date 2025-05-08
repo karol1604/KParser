@@ -8,6 +8,11 @@ pub const Statement = union(enum) {
         value: *const Expression,
     },
 
+    ReturnStatement: struct {
+        implicit: bool,
+        value: *const Expression,
+    },
+
     // etc
 };
 

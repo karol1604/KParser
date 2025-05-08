@@ -52,8 +52,23 @@ pub const Parser = struct {
 
     fn parse_statement(self: *Parser) !*Statement {
         return switch (self.current_token().type) {
+            .Let => self.parse_let_statement(),
             else => self.parse_expression_statement(),
         };
+    }
+
+    fn parse_let_statement(self: *Parser) !*Statement {
+        self.advance(); // consume let
+        const name = try self.expect_ident();
+
+        switch (self.current_token().type) {
+            .Equal => {
+                try self.expect_token(.Equal);
+                const val = try self.parse_expression(.Lowest);
+                return self.make_statement_pointer(Statement{ .LetStatement = .{ .name = name, .value = val } });
+            },
+            else => return error.ExpectedEqual,
+        }
     }
 
     fn parse_expression_statement(self: *Parser) !*Statement {
@@ -173,6 +188,16 @@ pub const Parser = struct {
             return error.UnexpectedTokenType;
         }
         self.advance();
+    }
+
+    fn expect_ident(self: *Parser) ![]const u8 {
+        switch (self.current_token().type) {
+            .Identifier => |ident| {
+                self.advance();
+                return ident;
+            },
+            else => return error.ExpectedIdentifier,
+        }
     }
 
     fn expect_int(self: *Parser) !i64 {

@@ -69,8 +69,7 @@ pub const Parser = struct {
             },
             .Eof => {},
             else => {
-                // The expression was parsed, but it's followed by an
-                // unexpected token instead of a semicolon or EOF.
+                // The expression was parsed, but it's followed by an unexpected token instead of a semicolon or EOF.
                 std.debug.print("Error: Unexpected token at {any}, line {d}\n", .{ self.current_token(), self.current_token().line });
                 return error.ExpectedSemicolonOrEofAfterExpression;
             },
@@ -159,7 +158,8 @@ pub const Parser = struct {
             return error.UnexpectedUnaryAfterBinary;
         }
 
-        const rhs = try self.parse_expression(prec);
+        // TODO: THIS IS A MAJOR HACK. We should check if `op` is right associative
+        const rhs = try self.parse_expression(if (op == .Exponent) .Product else prec);
 
         return self.make_expression_pointer(.{ .Binary = .{
             .left = lhs,

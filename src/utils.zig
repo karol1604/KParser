@@ -39,6 +39,12 @@ pub fn is_alpha_numeric(c: u8) bool {
 
 const MAX_DEPTH = 64;
 
+pub fn pretty_print_statement(stmt: ast.Statement) !void {
+    try switch (stmt) {
+        .ExpressionStatement => |expr| pretty_print_expression(expr.*),
+        else => error.NoPrettyPrintForStatementType,
+    };
+}
 /// Pretty prints an expression tree
 pub fn pretty_print_expression(expr: ast.Expression) void {
     var treeLines: [MAX_DEPTH]bool = undefined;

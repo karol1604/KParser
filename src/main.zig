@@ -154,7 +154,7 @@ test "parse int literal" {
     defer arena.deinit();
     const arena_alloc = arena.allocator();
 
-    const source = "1+2 == true; 3^2 == false";
+    const source = "1)";
 
     var lex = try lexer.Lexer.init(source, arena_alloc);
     defer lex.deinit();
@@ -164,12 +164,12 @@ test "parse int literal" {
     const t = try p.parse();
     defer t.deinit();
 
-    std.debug.print("Expressions:\n", .{});
+    std.debug.print("Statements:\n", .{});
     std.debug.print("---------\n", .{});
 
     for (t.items) |item| {
         std.debug.print("   ", .{});
-        utils.pretty_print_expression(item.*);
+        try utils.pretty_print_statement(item.*);
         std.debug.print("---------\n", .{});
     }
 }

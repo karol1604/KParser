@@ -10,6 +10,7 @@ const Precedence = ast.Precedence;
 const Expression = ast.Expression;
 const BinaryOperator = ast.BinaryOperator;
 const UnaryOperator = ast.UnaryOperator;
+const Statement = ast.Statement;
 
 pub const Parser = struct {
     tokens: []const Token,
@@ -31,19 +32,52 @@ pub const Parser = struct {
         return ptr;
     }
 
-    pub fn parse(self: *Parser) !std.ArrayList(*Expression) {
-        var statements = std.ArrayList(*Expression).init(self.alloc);
+    fn make_statement_pointer(self: *Parser, stmt: Statement) !*Statement {
+        const ptr = try self.alloc.create(Statement);
+        ptr.* = stmt;
+        return ptr;
+    }
+
+    pub fn parse(self: *Parser) !std.ArrayList(*Statement) {
+        var statements = std.ArrayList(*Statement).init(self.alloc);
         errdefer statements.deinit();
 
         while (self.current_token().type != .Eof) {
-            const expr = try self.parse_expression(.Lowest);
-            if (self.current_token().type == .Semicolon) {
-                self.advance();
-            }
-            try statements.append(expr);
+            const stmt = try self.parse_statement();
+            try statements.append(stmt);
         }
 
         return statements;
+    }
+
+    fn parse_statement(self: *Parser) !*Statement {
+        return switch (self.current_token().type) {
+            else => self.parse_expression_statement(),
+        };
+    }
+
+    fn parse_expression_statement(self: *Parser) !*Statement {
+        const expr = try self.parse_expression(.Lowest);
+        // Not sure about the first if part
+        // if (self.peek().type == .Eof or self.current_token().type == .Semicolon) {
+        //     self.advance();
+        // } else return error.ExpectedSemicolon;
+
+        switch (self.current_token().type) {
+            .Semicolon => {
+                self.advance(); // Consume the semicolon
+            },
+            .Eof => {},
+            else => {
+                // The expression was parsed, but it's followed by an
+                // unexpected token instead of a semicolon or EOF.
+                std.debug.print("Error: Unexpected token at {any}, line {d}\n", .{ self.current_token(), self.current_token().line });
+                return error.ExpectedSemicolonOrEofAfterExpression;
+            },
+        }
+
+        const stmt = Statement{ .ExpressionStatement = expr };
+        return try self.make_statement_pointer(stmt);
     }
 
     fn parse_expression(self: *Parser, prec: Precedence) anyerror!*Expression {
@@ -107,13 +141,24 @@ pub const Parser = struct {
         return expr;
     }
 
+    fn is_operand_start(t: TokenType) bool {
+        return switch (t) {
+            .IntLiteral, .Identifier, .True, .False, .LParen => true,
+            else => false,
+        };
+    }
+
     fn parse_binary_expression(self: *Parser, lhs: *Expression, op: BinaryOperator, prec: Precedence) !*Expression {
         self.advance();
 
         // TODO: this is a hack, we should change this function's implementation. Maybe add a `allow_prefix` parameter?
-        if (self.current_token().type == .Plus or self.current_token().type == .Minus or self.current_token().type == .Bang) {
-            return error.UnexpectedUnaryOperator;
+        // if (self.current_token().type == .Plus or self.current_token().type == .Minus or self.current_token().type == .Bang) {
+        //     return error.UnexpectedUnaryOperator;
+        // }
+        if (!is_operand_start(self.current_token().type)) {
+            return error.UnexpectedUnaryAfterBinary;
         }
+
         const rhs = try self.parse_expression(prec);
 
         return self.make_expression_pointer(.{ .Binary = .{
@@ -167,6 +212,14 @@ pub const Parser = struct {
             return Token{ .type = .Eof, .pos = token.Span{ .start = 0, .size = 0 }, .line = self.line };
         }
         return self.tokens[self.current];
+    }
+
+    fn peek(self: *Parser) Token {
+        if (self.current + 1 >= self.tokens.len) {
+            return Token{ .type = .Eof, .pos = token.Span{ .start = 0, .size = 0 }, .line = self.line };
+        }
+
+        return self.tokens[self.current + 1];
     }
 
     fn get_token_prec(_: *Parser, token_type: TokenType) Precedence {

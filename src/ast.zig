@@ -1,5 +1,16 @@
 const std = @import("std");
 
+pub const Statement = union(enum) {
+    ExpressionStatement: *const Expression,
+
+    LetStatement: struct {
+        name: []const u8,
+        value: *const Expression,
+    },
+
+    // etc
+};
+
 pub const Expression = union(enum) {
     IntLiteral: i64,
 

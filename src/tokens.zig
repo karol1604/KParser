@@ -107,27 +107,33 @@ pub const Token = struct {
         const type_str = token_type_to_string(self.type);
         switch (self.type) {
             .Identifier => |name| {
-                try writer.print("Ident({s}) at ({d}..{d}) on line {d}", .{
+                try writer.print("Ident({s}) at ({d}..{d}) on line {d} (offset: [{d}..{d}])", .{
                     name,
                     self.span.start.column,
                     self.span.end.column,
                     self.span.start.line,
+                    self.span.start.offset,
+                    self.span.end.offset,
                 });
             },
             .IntLiteral => |val| {
-                try writer.print("IntLiteral({d}) at ({d}..{d}) on line {d}", .{
+                try writer.print("IntLiteral({d}) at ({d}..{d}) on line {d} (offset: [{d}..{d}])", .{
                     val,
                     self.span.start.column,
                     self.span.end.column,
                     self.span.start.line,
+                    self.span.start.offset,
+                    self.span.end.offset,
                 });
             },
             else => {
-                try writer.print("{s} at ({d}..{d}) on line {d}", .{
+                try writer.print("{s} at ({d}..{d}) on line {d} (offset: [{d}..{d}])", .{
                     type_str,
                     self.span.start.column,
                     self.span.end.column,
                     self.span.start.line,
+                    self.span.start.offset,
+                    self.span.end.offset,
                 });
             },
         }

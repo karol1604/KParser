@@ -1,4 +1,7 @@
 const std = @import("std");
+const span = @import("span.zig");
+
+const Span = span.Span;
 
 pub const TokenType = union(enum) {
     Plus,
@@ -96,15 +99,9 @@ pub fn token_type_to_string(token_type: TokenType) []const u8 {
     }
 }
 
-pub const Span = struct {
-    start: usize,
-    size: usize,
-};
-
 pub const Token = struct {
     type: TokenType,
-    pos: Span,
-    line: usize,
+    span: Span,
 
     pub fn format(self: Token, comptime _: []const u8, _: std.fmt.FormatOptions, writer: anytype) !void {
         const type_str = token_type_to_string(self.type);
@@ -112,25 +109,25 @@ pub const Token = struct {
             .Identifier => |name| {
                 try writer.print("Ident({s}) at ({d}..{d}) on line {d}", .{
                     name,
-                    self.pos.start,
-                    self.pos.start + self.pos.size,
-                    self.line,
+                    self.span.start.column,
+                    self.span.end.column,
+                    self.span.start.line,
                 });
             },
             .IntLiteral => |val| {
                 try writer.print("IntLiteral({d}) at ({d}..{d}) on line {d}", .{
                     val,
-                    self.pos.start,
-                    self.pos.start + self.pos.size,
-                    self.line,
+                    self.span.start.column,
+                    self.span.end.column,
+                    self.span.start.line,
                 });
             },
             else => {
                 try writer.print("{s} at ({d}..{d}) on line {d}", .{
                     type_str,
-                    self.pos.start,
-                    self.pos.start + self.pos.size,
-                    self.line,
+                    self.span.start.column,
+                    self.span.end.column,
+                    self.span.start.line,
                 });
             },
         }

@@ -59,9 +59,11 @@ pub const Parser = struct {
 
     fn parse_let_statement(self: *Parser) !*Statement {
         self.advance(); // consume let
+
         const name = try self.expect_ident();
         try self.expect_token(.Equal);
         const val = try self.parse_expression(.Lowest);
+
         switch (self.current_token().type) {
             .Semicolon => {
                 self.advance(); // Consume the semicolon
@@ -72,24 +74,12 @@ pub const Parser = struct {
                     "Error: Expected semicolon or EOF after let statement value at {any}, line {d}\n",
                     .{ self.current_token(), self.current_token().line },
                 );
-                return error.ExpectedSemicolonOrEofAfterExpression; // Using existing for now
+                return error.ExpectedSemicolonOrEofAfterExpression;
             },
         }
         return self.make_statement_pointer(Statement{
             .LetStatement = .{ .name = name, .value = val },
         });
-
-        // switch (self.current_token().type) {
-        //     .Equal => {
-        //         try self.expect_token(.Equal);
-        //         const val = try self.parse_expression(.Lowest);
-        //         if (self.current_token().type == .Semicolon) {
-        //             self.advance();
-        //         }
-        //         return self.make_statement_pointer(Statement{ .LetStatement = .{ .name = name, .value = val } });
-        //     },
-        //     else => return error.ExpectedEqual,
-        // }
     }
 
     fn parse_expression_statement(self: *Parser) !*Statement {

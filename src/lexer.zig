@@ -13,8 +13,9 @@ pub const Lexer = struct {
     source: []const u8,
     tokens: std.ArrayList(Token),
     alloc: std.mem.Allocator,
-    current: usize = 0,
-    line: usize = 1,
+    current: usize = 0, // offset
+    line: usize = 1, // current line
+    col: usize = 1, // current column
     start: usize = 0,
 
     pub fn init(source: []const u8, alloc: std.mem.Allocator) !Lexer {
@@ -34,8 +35,8 @@ pub const Lexer = struct {
         return c;
     }
 
-    fn peek(self: *Lexer, offset: u8) u8 {
-        if (self.current + @as(usize, offset) >= self.source.len) {
+    fn peek(self: *Lexer, offset: usize) u8 {
+        if (self.current + offset >= self.source.len) {
             return 0; // Return null byte for end-of-file or out-of-bounds
         }
         return self.source[self.current + offset];
@@ -76,7 +77,7 @@ pub const Lexer = struct {
     fn add_token(self: *Lexer, token_type: TokenType, pos: Span, line: usize) !void {
         const tok = Token{
             .type = token_type,
-            .pos = pos,
+            .span = pos,
             .line = line,
         };
         try self.tokens.append(tok);
@@ -86,9 +87,15 @@ pub const Lexer = struct {
         const c = self.advance();
 
         switch (c) {
-            ' ', '\r', '\t' => {},
+            ' ', '\t' => {
+                // idk what to do for the \t
+                self.col += 1;
+            },
 
-            '\n' => self.line += 1,
+            '\n' => {
+                self.line += 1;
+                self.col = 1;
+            },
 
             ',' => try self.add_token(.Comma, Span{ .start = self.start, .size = 1 }, self.line),
             '.' => try self.add_token(.Dot, Span{ .start = self.start, .size = 1 }, self.line),

@@ -10,14 +10,10 @@ pub const Span = struct {
     start: Location,
     end: Location,
 
-    pub fn with_size(start: Location, size: usize) Span {
+    pub fn sum(left: Span, right: Span) Span {
         return Span{
-            .start = start,
-            .end = Location{
-                .offset = start.offset + size,
-                .line = start.line,
-                .column = start.column + size,
-            },
+            .start = left.start,
+            .end = right.end,
         };
     }
 };

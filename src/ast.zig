@@ -1,6 +1,14 @@
 const std = @import("std");
+const span = @import("span.zig");
 
-pub const Statement = union(enum) {
+const Span = span.Span;
+
+pub const Statement = struct {
+    type: StatementType,
+    span: Span,
+};
+
+pub const StatementType = union(enum) {
     ExpressionStatement: *const Expression,
 
     LetStatement: struct {
@@ -16,7 +24,12 @@ pub const Statement = union(enum) {
     // etc
 };
 
-pub const Expression = union(enum) {
+pub const Expression = struct {
+    type: ExpressionType,
+    span: Span,
+};
+
+pub const ExpressionType = union(enum) {
     IntLiteral: i64,
 
     Identifier: []const u8,

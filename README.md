@@ -6,5 +6,5 @@ Please ignore the error handling code. It's quite annoying to make good errors i
 
 ## Bugs
 - [FIXED] if the parser errors out, we directly return an error and we don't properly free the memory leading to memory leaks. Maybe we should use an arena allocator for this?
-- we somehow parse expressions like `1)`
+- [] we somehow parse expressions like `1)`
 - this shit is prolly riddled with even more bugs tbh

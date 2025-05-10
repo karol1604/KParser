@@ -152,12 +152,12 @@ pub const Lexer = struct {
             },
 
             '|' => {
-                const matches = self.match('=');
+                const matches = self.match('|');
                 try self.add_token(if (matches) .DoublePipe else .Pipe, .{ .start = tok_start_loc, .end = self.current_location() });
             },
 
             '&' => {
-                const matches = self.match('=');
+                const matches = self.match('&');
                 try self.add_token(if (matches) .DoubleAmpersand else .Ampersand, .{ .start = tok_start_loc, .end = self.current_location() });
             },
 

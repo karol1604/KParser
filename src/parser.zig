@@ -2,9 +2,12 @@ const std = @import("std");
 const token = @import("tokens.zig");
 const ast = @import("ast.zig");
 const utils = @import("utils.zig");
+const span = @import("span.zig");
 
 const Token = token.Token;
 const TokenType = token.TokenType;
+const Span = span.Span;
+const Location = span.Location;
 
 const Precedence = ast.Precedence;
 const Expression = ast.Expression;
@@ -26,13 +29,13 @@ pub const Parser = struct {
         _ = self;
     }
 
-    fn make_expression_pointer(self: *Parser, expr: Expression) !*Expression {
+    fn make_expression_pointer(self: *const Parser, expr: Expression) !*Expression {
         const ptr = try self.alloc.create(Expression);
         ptr.* = expr;
         return ptr;
     }
 
-    fn make_statement_pointer(self: *Parser, stmt: Statement) !*Statement {
+    fn make_statement_pointer(self: *const Parser, stmt: Statement) !*Statement {
         const ptr = try self.alloc.create(Statement);
         ptr.* = stmt;
         return ptr;
@@ -72,7 +75,7 @@ pub const Parser = struct {
             else => {
                 std.debug.print(
                     "Error: Expected semicolon or EOF after let statement value at {any}, line {d}\n",
-                    .{ self.current_token(), self.current_token().line },
+                    .{ self.current_token(), self.current_token().span.start.line },
                 );
                 return error.ExpectedSemicolonOrEofAfterExpression;
             },
@@ -96,7 +99,7 @@ pub const Parser = struct {
             .Eof => {},
             else => {
                 // The expression was parsed, but it's followed by an unexpected token instead of a semicolon or EOF.
-                std.debug.print("Error: Unexpected token at {any}, line {d}\n", .{ self.current_token(), self.current_token().line });
+                std.debug.print("Error: Unexpected token at {any}, line {d}\n", .{ self.current_token(), self.current_token().span.start.line });
                 return error.ExpectedSemicolonOrEofAfterExpression;
             },
         }
@@ -245,14 +248,18 @@ pub const Parser = struct {
 
     fn current_token(self: *Parser) Token {
         if (self.current >= self.tokens.len) {
-            return Token{ .type = .Eof, .pos = token.Span{ .start = 0, .size = 0 }, .line = self.line };
+            const tok_span = Span{
+                .start = Location{ .line = self.line, .column = 0, .offset = 0 },
+                .end = Location{ .line = self.line, .column = 0, .offset = 0 },
+            };
+            return Token{ .type = .Eof, .span = tok_span };
         }
         return self.tokens[self.current];
     }
 
-    fn peek(self: *Parser) Token {
+    fn peek(self: *const Parser) Token {
         if (self.current + 1 >= self.tokens.len) {
-            return Token{ .type = .Eof, .pos = token.Span{ .start = 0, .size = 0 }, .line = self.line };
+            return Token{ .type = .Eof, .span = Span{ .start = 0, .size = 0 }, .line = self.line };
         }
 
         return self.tokens[self.current + 1];

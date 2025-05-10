@@ -10,4 +10,5 @@ Please ignore the error handling code. It's quite annoying to make good errors i
 - this shit is prolly riddled with even more bugs tbh
 
 ## Todo
-- Pipe `Span` into `Expression` and `Statement`. For now, we literally ignore any position info LOL
+- [x] Pipe `Span` into `Expression` and `Statement`. For now, we literally ignore any position info LOL
+- Make some kind of `Diagnostic` struct or wtv for error handling bc now it's basically inexistent

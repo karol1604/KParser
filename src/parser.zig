@@ -3,11 +3,15 @@ const token = @import("tokens.zig");
 const ast = @import("ast.zig");
 const utils = @import("utils.zig");
 const span = @import("span.zig");
+const diagnostics = @import("diagnostics.zig");
 
 const Token = token.Token;
 const TokenType = token.TokenType;
+
 const Span = span.Span;
 const Location = span.Location;
+
+const Diagnostic = diagnostics.Diagnostic;
 
 const Precedence = ast.Precedence;
 const Expression = ast.Expression;
@@ -19,10 +23,14 @@ pub const Parser = struct {
     tokens: []const Token,
     alloc: std.mem.Allocator,
     current: usize = 0,
-    line: usize = 1,
+    diagnostics: *std.ArrayList(Diagnostic),
 
-    pub fn init(tokens: []const Token, alloc: std.mem.Allocator) Parser {
-        return Parser{ .tokens = tokens, .alloc = alloc };
+    pub fn init(tokens: []const Token, alloc: std.mem.Allocator, diagnostics_: *std.ArrayList(Diagnostic)) Parser {
+        return Parser{
+            .tokens = tokens,
+            .alloc = alloc,
+            .diagnostics = diagnostics_,
+        };
     }
 
     pub fn deinit(self: *Parser) void {
@@ -81,6 +89,15 @@ pub const Parser = struct {
                     "Error: Expected semicolon or EOF after let statement value at {any}\n",
                     .{self.current_token().span},
                 );
+
+                try self.diagnostics.append(
+                    Diagnostic{
+                        .kind = .ParserError,
+                        .message = "Expected semicolon or EOF after let statement value",
+                        .span = self.current_token().span,
+                    },
+                );
+
                 return error.ExpectedSemicolonOrEofAfterExpression;
             },
         }
@@ -110,7 +127,7 @@ pub const Parser = struct {
             .Eof => {},
             else => {
                 // The expression was parsed, but it's followed by an unexpected token instead of a semicolon or EOF.
-                std.debug.print("Error: Unexpected token at {any}, line {any}\n", .{ self.current_token().type, self.current_token().span });
+                std.debug.print("Error: Unexpected token at {s}, at {any}\n", .{ token.token_type_to_string(self.current_token().type), self.current_token().span });
                 return error.ExpectedSemicolonOrEofAfterExpression;
             },
         }

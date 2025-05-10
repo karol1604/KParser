@@ -4,6 +4,7 @@ const lexer = @import("lexer.zig");
 const parser = @import("parser.zig");
 const ast = @import("ast.zig");
 const utils = @import("utils.zig");
+const diagnostics = @import("diagnostics.zig");
 
 pub fn main() !void {
     // const tok = token.Token{
@@ -152,17 +153,29 @@ test "parse int literal" {
     defer arena.deinit();
     const arena_alloc = arena.allocator();
 
+    const diagnostics_list = std.ArrayList(diagnostics.Diagnostic).init(arena_alloc);
+
     // const source = "(5 + 3 * (10 - 2) / 4 == 7) && (9 >= 8 || 6 < 5)";
     // const source = "2 ^ 3 ^ 4";
-    const source = "2 * (3 + 4) / 5 - 6";
+    const source = "let a = 2";
 
     var lex = try lexer.Lexer.init(source, arena_alloc);
     defer lex.deinit();
     try lex.tokenize();
 
-    var p = parser.Parser.init(lex.tokens.items, arena_alloc);
+    var p = parser.Parser.init(lex.tokens.items, arena_alloc, @constCast(&diagnostics_list));
     const t = try p.parse();
     defer t.deinit();
+
+    std.debug.print("LEN: {d}\n", .{diagnostics_list.items.len});
+    if (diagnostics_list.items.len > 0) {
+        std.debug.print("Diagnostics:\n", .{});
+        for (diagnostics_list.items) |diag| {
+            std.debug.print("  >>>>>> {any}\n", .{diag});
+        }
+    }
+
+    std.debug.print("\n{any}\n", .{t.items[0].*.span});
 
     std.debug.print("Statements for {s}:\n", .{source});
     std.debug.print("---------\n", .{});

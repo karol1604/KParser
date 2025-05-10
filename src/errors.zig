@@ -23,7 +23,7 @@ pub const LexerError = struct {
         }
         if (self.token) |tok| {
             try writer.print("near token '{s}'\n\n", .{tok});
-            try writer.print("{s}{s}{s}{s}{s}\n", .{ self.source[0..tok.pos.start], RED, self.source[tok.pos.start .. tok.pos.start + tok.pos.size], RESET, self.source[tok.pos.start + tok.pos.size ..] });
+            try writer.print("{s}{s}{s}{s}{s}\n", .{ self.source[0..tok.span.start], RED, self.source[tok.span.start .. tok.span.start + tok.span.size], RESET, self.source[tok.span.start + tok.span.size ..] });
         }
     }
 };

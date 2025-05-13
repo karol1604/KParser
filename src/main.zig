@@ -5,6 +5,7 @@ const parser = @import("parser.zig");
 const ast = @import("ast.zig");
 const utils = @import("utils.zig");
 const diagnostics = @import("diagnostics.zig");
+const checker = @import("checker.zig");
 
 pub fn main() !void {
     // const tok = token.Token{
@@ -157,7 +158,7 @@ test "parse int literal" {
 
     // const source = "(5 + 3 * (10 - 2) / 4 == 7) && (9 >= 8 || 6 < 5)";
     // const source = "2 ^ 3 ^ 4";
-    const source = "let a = 2";
+    const source = "-true";
 
     var lex = try lexer.Lexer.init(source, arena_alloc);
     defer lex.deinit();
@@ -166,14 +167,6 @@ test "parse int literal" {
     var p = parser.Parser.init(lex.tokens.items, arena_alloc, @constCast(&diagnostics_list));
     const t = try p.parse();
     defer t.deinit();
-
-    std.debug.print("LEN: {d}\n", .{diagnostics_list.items.len});
-    if (diagnostics_list.items.len > 0) {
-        std.debug.print("Diagnostics:\n", .{});
-        for (diagnostics_list.items) |diag| {
-            std.debug.print("  >>>>>> {any}\n", .{diag});
-        }
-    }
 
     std.debug.print("\n{any}\n", .{t.items[0].*.span});
 
@@ -185,4 +178,9 @@ test "parse int literal" {
         try utils.pretty_print_statement(item.*);
         std.debug.print("---------\n", .{});
     }
+
+    var check = checker.Checker.init(arena_alloc, t.items);
+    const cs = try check.check();
+
+    std.debug.print("\n{any}\n", .{cs.items[0].*});
 }

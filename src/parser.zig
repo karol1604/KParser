@@ -102,7 +102,7 @@ pub const Parser = struct {
             },
         }
         return self.make_statement_pointer(Statement{
-            .type = .{ .LetStatement = .{
+            .kind = .{ .LetStatement = .{
                 .name = name,
                 .value = val,
             } },
@@ -133,7 +133,7 @@ pub const Parser = struct {
         }
 
         const stmt = Statement{
-            .type = .{ .ExpressionStatement = expr },
+            .kind = .{ .ExpressionStatement = expr },
             .span = Span.sum(start_span, end_span),
         };
         return try self.make_statement_pointer(stmt);
@@ -239,7 +239,7 @@ pub const Parser = struct {
         const rhs = try self.parse_expression(.Prefix);
 
         return self.make_expression_pointer(.{
-            .type = .{ .Unary = .{ .operator = op, .right = rhs } },
+            .kind = .{ .Unary = .{ .operator = op, .right = rhs } },
             .span = Span.sum(op_token.span, rhs.span),
         });
     }
@@ -268,10 +268,10 @@ pub const Parser = struct {
         // if (self.current_token().type == .Plus or self.current_token().type == .Minus or self.current_token().type == .Bang) {
         //     return error.UnexpectedUnaryOperator;
         // }
-        if (!is_operand_start(self.current_token().type)) {
-            std.debug.print("Error: Expected operand after binary operator at {any}\n", .{self.current_token().span});
-            return error.UnexpectedUnaryAfterBinary;
-        }
+        // if (!is_operand_start(self.current_token().type)) {
+        //     std.debug.print("Error: Expected operand after binary operator at {any}\n", .{self.current_token().span});
+        //     return error.UnexpectedUnaryAfterBinary;
+        // }
 
         // TODO: THIS IS A MAJOR HACK. We should check if `op` is right associative
         const right_prec_adjust = if (op == .Exponent) @intFromEnum(prec) - 1 else @intFromEnum(prec);
@@ -279,7 +279,7 @@ pub const Parser = struct {
 
         const expr_span = Span.sum(lhs.span, rhs.span);
         return self.make_expression_pointer(.{
-            .type = .{ .Binary = .{
+            .kind = .{ .Binary = .{
                 .left = lhs,
                 .operator = op,
                 .right = rhs,
@@ -333,7 +333,7 @@ pub const Parser = struct {
         self.advance();
 
         return self.make_expression_pointer(.{
-            .type = .{ .BoolLiteral = value },
+            .kind = .{ .BoolLiteral = value },
             .span = bool_token.span,
         });
     }
@@ -348,7 +348,7 @@ pub const Parser = struct {
 
         self.advance();
         return try self.make_expression_pointer(.{
-            .type = .{ .IntLiteral = value },
+            .kind = .{ .IntLiteral = value },
             .span = int_token.span,
         });
     }

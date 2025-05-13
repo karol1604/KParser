@@ -4,11 +4,11 @@ const span = @import("span.zig");
 const Span = span.Span;
 
 pub const Statement = struct {
-    type: StatementType,
+    kind: StatementKind,
     span: Span,
 };
 
-pub const StatementType = union(enum) {
+pub const StatementKind = union(enum) {
     ExpressionStatement: *const Expression,
 
     LetStatement: struct {
@@ -25,11 +25,11 @@ pub const StatementType = union(enum) {
 };
 
 pub const Expression = struct {
-    type: ExpressionType,
+    kind: ExpressionKind,
     span: Span,
 };
 
-pub const ExpressionType = union(enum) {
+pub const ExpressionKind = union(enum) {
     IntLiteral: i64,
 
     Identifier: []const u8,

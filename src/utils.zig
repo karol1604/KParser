@@ -40,7 +40,7 @@ pub fn is_alpha_numeric(c: u8) bool {
 const MAX_DEPTH = 64;
 
 pub fn pretty_print_statement(stmt: ast.Statement) !void {
-    try switch (stmt.type) {
+    try switch (stmt.kind) {
         .ExpressionStatement => |expr| pretty_print_expression(expr.*),
         .LetStatement => |statement| {
             std.debug.print("LetStatement {s} =\n", .{statement.name});
@@ -53,11 +53,11 @@ pub fn pretty_print_statement(stmt: ast.Statement) !void {
 /// Pretty prints an expression tree
 pub fn pretty_print_expression(expr: ast.Expression) void {
     var treeLines: [MAX_DEPTH]bool = undefined;
-    prettyPrintRec(expr.type, 0, &treeLines, true);
+    prettyPrintRec(expr.kind, 0, &treeLines, true);
 }
 
 fn prettyPrintRec(
-    expr: ast.ExpressionType,
+    expr: ast.ExpressionKind,
     depth: usize,
     treeLines: *[MAX_DEPTH]bool,
     isLast: bool,
@@ -100,7 +100,7 @@ fn prettyPrintRec(
             // vertical bar for deeper siblings
             treeLines[depth] = !isLast;
             // recurse on the single child (always the last one)
-            prettyPrintRec(u.right.*.type, depth + 1, treeLines, true);
+            prettyPrintRec(u.right.*.kind, depth + 1, treeLines, true);
         },
         .Binary => |b| {
             const op_str = switch (b.operator) {
@@ -122,9 +122,9 @@ fn prettyPrintRec(
 
             treeLines[depth] = !isLast;
             // left is not last
-            prettyPrintRec(b.left.*.type, depth + 1, treeLines, false);
+            prettyPrintRec(b.left.*.kind, depth + 1, treeLines, false);
             // right is last
-            prettyPrintRec(b.right.*.type, depth + 1, treeLines, true);
+            prettyPrintRec(b.right.*.kind, depth + 1, treeLines, true);
         },
     }
 }

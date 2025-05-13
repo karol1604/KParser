@@ -158,7 +158,7 @@ test "parse int literal" {
 
     // const source = "(5 + 3 * (10 - 2) / 4 == 7) && (9 >= 8 || 6 < 5)";
     // const source = "2 ^ 3 ^ 4";
-    const source = "-true";
+    const source = "1 <= 1";
 
     var lex = try lexer.Lexer.init(source, arena_alloc);
     defer lex.deinit();

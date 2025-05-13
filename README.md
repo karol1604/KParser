@@ -4,6 +4,8 @@ But this time, i'll actuallt try to finish it to some degree!
 
 Please ignore the error handling code. It's quite annoying to make good errors in zig and i'm still thinking about the good implementation here.
 
+I'm also not sure about the `Checker` implementation. I've never written one before and the sheer amount of design decisions to make overwhelm me. I'm probably gonna iterate and refactor it a LOT of times.
+
 ## Bugs
 - [FIXED] if the parser errors out, we directly return an error and we don't properly free the memory leading to memory leaks. Maybe we should use an arena allocator for this?
 - [FIXED] we somehow parse expressions like `1)`

@@ -86,15 +86,68 @@ pub const Checker = struct {
             .BoolLiteral => |b| {
                 return try self.typed_expression(.{ .BoolLiteral = b }, expr.*.span, BOOL_TYPE_ID, type_hint);
             },
+
             .Unary => |unary| {
                 switch (unary.operator) {
                     .Not => {
                         const right = try self.check_expression(unary.right, BOOL_TYPE_ID);
-                        return try self.typed_expression(.{ .Unary = .{ .operator = unary.operator, .right = right } }, expr.*.span, BOOL_TYPE_ID, type_hint);
+                        return try self.typed_expression(
+                            .{ .Unary = .{
+                                .operator = unary.operator,
+                                .right = right,
+                            } },
+                            expr.*.span,
+                            BOOL_TYPE_ID,
+                            type_hint,
+                        );
                     },
                     .Plus, .Minus => {
                         const right = try self.check_expression(unary.right, INT_TYPE_ID);
-                        return try self.typed_expression(.{ .Unary = .{ .operator = unary.operator, .right = right } }, expr.*.span, INT_TYPE_ID, type_hint);
+                        return try self.typed_expression(
+                            .{ .Unary = .{
+                                .operator = unary.operator,
+                                .right = right,
+                            } },
+                            expr.*.span,
+                            INT_TYPE_ID,
+                            type_hint,
+                        );
+                    },
+                }
+            },
+
+            .Binary => |binary| {
+                switch (binary.operator) {
+                    .Plus, .Minus, .Multiply, .Divide, .Exponent => {
+                        const left = try self.check_expression(binary.left, INT_TYPE_ID);
+                        const right = try self.check_expression(binary.right, INT_TYPE_ID);
+                        return try self.typed_expression(
+                            .{ .Binary = .{
+                                .left = left,
+                                .operator = binary.operator,
+                                .right = right,
+                            } },
+                            expr.*.span,
+                            INT_TYPE_ID,
+                            type_hint,
+                        );
+                    },
+                    .LessThan, .GreaterThan, .LessThanOrEqual, .GreaterThanOrEqual => {
+                        const left = try self.check_expression(binary.left, INT_TYPE_ID);
+                        const right = try self.check_expression(binary.right, INT_TYPE_ID);
+                        return try self.typed_expression(
+                            .{ .Binary = .{
+                                .left = left,
+                                .operator = binary.operator,
+                                .right = right,
+                            } },
+                            expr.*.span,
+                            BOOL_TYPE_ID,
+                            type_hint,
+                        );
+                    },
+                    else => {
+                        return error.UnknownBinaryOperator;
                     },
                 }
             },

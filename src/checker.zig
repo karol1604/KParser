@@ -69,8 +69,7 @@ pub const Checker = struct {
     fn check_statement(self: *Checker, stmt: *const ast.Statement) !*CheckedStatement {
         const expr = switch (stmt.*.kind) {
             ast.StatementKind.ExpressionStatement => |expr_stmt| try self.check_expression(expr_stmt, null),
-            ast.StatementKind.LetStatement => |let_stmt| try self.check_expression(let_stmt.value, null),
-            ast.StatementKind.ReturnStatement => |return_stmt| try self.check_expression(return_stmt.value, null),
+            else => return error.NotYetImplemented,
         };
 
         return self.make_pointer(CheckedStatement, CheckedStatement{

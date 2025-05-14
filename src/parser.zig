@@ -23,13 +23,12 @@ pub const Parser = struct {
     tokens: []const Token,
     alloc: std.mem.Allocator,
     current: usize = 0,
-    diagnostics: *std.ArrayList(Diagnostic),
+    // diagnostics: *std.ArrayList(Diagnostic),
 
-    pub fn init(tokens: []const Token, alloc: std.mem.Allocator, diagnostics_: *std.ArrayList(Diagnostic)) Parser {
+    pub fn init(tokens: []const Token, alloc: std.mem.Allocator) Parser {
         return Parser{
             .tokens = tokens,
             .alloc = alloc,
-            .diagnostics = diagnostics_,
         };
     }
 
@@ -90,13 +89,13 @@ pub const Parser = struct {
                     .{self.current_token().span},
                 );
 
-                try self.diagnostics.append(
-                    Diagnostic{
-                        .kind = .ParserError,
-                        .message = "Expected semicolon or EOF after let statement value",
-                        .span = self.current_token().span,
-                    },
-                );
+                // try self.diagnostics.append(
+                // Diagnostic{
+                //     .kind = .ParserError,
+                //     .message = "Expected semicolon or EOF after let statement value",
+                //     .span = self.current_token().span,
+                // },
+                // );
 
                 return error.ExpectedSemicolonOrEofAfterExpression;
             },

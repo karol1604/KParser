@@ -154,7 +154,7 @@ test "parse int literal" {
     defer arena.deinit();
     const arena_alloc = arena.allocator();
 
-    const diagnostics_list = std.ArrayList(diagnostics.Diagnostic).init(arena_alloc);
+    // const diagnostics_list = std.ArrayList(diagnostics.Diagnostic).init(arena_alloc);
 
     // const source = "(5 + 3 * (10 - 2) / 4 == 7) && (9 >= 8 || 6 < 5)";
     // const source = "2 ^ 3 ^ 4";
@@ -164,7 +164,7 @@ test "parse int literal" {
     defer lex.deinit();
     try lex.tokenize();
 
-    var p = parser.Parser.init(lex.tokens.items, arena_alloc, @constCast(&diagnostics_list));
+    var p = parser.Parser.init(lex.tokens.items, arena_alloc);
     const t = try p.parse();
     defer t.deinit();
 
@@ -181,6 +181,35 @@ test "parse int literal" {
 
     var check = checker.Checker.init(arena_alloc, t.items);
     const cs = try check.check();
-
     utils.pretty_print_checked_expression(cs.items[0].*.expr.*);
+}
+
+test "read from file" {
+    const RESET = "\x1b[0m";
+    const RED = "\x1b[31m";
+
+    const test_alloc = std.testing.allocator;
+    var arena = std.heap.ArenaAllocator.init(test_alloc);
+    defer arena.deinit();
+    const arena_alloc = arena.allocator();
+
+    const source = try utils.read_file(arena_alloc, "test.k");
+    defer arena_alloc.free(source);
+
+    std.debug.print("{s}*********\nSource:\n{s}**********\n{s}", .{ RED, source, RESET });
+
+    var lex = try lexer.Lexer.init(source, arena_alloc);
+    defer lex.deinit();
+    try lex.tokenize();
+
+    var p = parser.Parser.init(lex.tokens.items, arena_alloc);
+    const t = try p.parse();
+    defer t.deinit();
+
+    var check = checker.Checker.init(arena_alloc, t.items);
+    const cs = try check.check();
+    for (cs.items) |item| {
+        utils.pretty_print_checked_expression(item.*.expr.*);
+        std.debug.print("---------\n", .{});
+    }
 }

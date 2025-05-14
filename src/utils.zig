@@ -14,6 +14,16 @@ pub fn is_alpha_numeric(c: u8) bool {
     return is_alpha(c) or is_digit(c);
 }
 
+pub fn read_file(allocator: std.mem.Allocator, path: []const u8) ![]u8 {
+    const cwd = std.fs.cwd();
+    // Open the file for reading
+    const file = try cwd.openFile(path, .{ .mode = .read_only });
+    defer file.close();
+
+    // Read whole file into a buffer (initial capacity 4 KiB)
+    return try file.readToEndAlloc(allocator, 4096);
+}
+
 const MAX_DEPTH = 64;
 
 // ********** CHECKED EXPRESSION PRETTY PRINTING *********

@@ -14,8 +14,8 @@ const CheckedStatement = struct {
     expr: *const CheckedExpression,
 };
 
-const CheckedExpression = struct {
-    type: TypeId,
+pub const CheckedExpression = struct {
+    type_id: TypeId,
     data: CheckedExpressionData,
 };
 
@@ -145,9 +145,39 @@ pub const Checker = struct {
                             type_hint,
                         );
                     },
-                    else => {
-                        return error.UnknownBinaryOperator;
+                    .Equal, .NotEqual => {
+                        const left = try self.check_expression(binary.left, null);
+                        const right = try self.check_expression(binary.right, left.type_id);
+
+                        return try self.typed_expression(
+                            .{ .Binary = .{
+                                .left = left,
+                                .operator = binary.operator,
+                                .right = right,
+                            } },
+                            expr.*.span,
+                            BOOL_TYPE_ID,
+                            type_hint,
+                        );
                     },
+                    .LogicalAnd, .LogicalOr => {
+                        const left = try self.check_expression(binary.left, BOOL_TYPE_ID);
+                        const right = try self.check_expression(binary.right, BOOL_TYPE_ID);
+
+                        return try self.typed_expression(
+                            .{ .Binary = .{
+                                .left = left,
+                                .operator = binary.operator,
+                                .right = right,
+                            } },
+                            expr.*.span,
+                            BOOL_TYPE_ID,
+                            type_hint,
+                        );
+                    },
+                    // else => {
+                    //     return error.UnknownBinaryOperator;
+                    // },
                 }
             },
             else => {
@@ -164,13 +194,13 @@ pub const Checker = struct {
                 return error.TypeMismatch;
             } else {
                 return self.make_pointer(CheckedExpression, CheckedExpression{
-                    .type = res_type,
+                    .type_id = res_type,
                     .data = res,
                 });
             }
         } else {
             return self.make_pointer(CheckedExpression, CheckedExpression{
-                .type = res_type,
+                .type_id = res_type,
                 .data = res,
             });
         }

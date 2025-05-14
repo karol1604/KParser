@@ -158,7 +158,7 @@ test "parse int literal" {
 
     // const source = "(5 + 3 * (10 - 2) / 4 == 7) && (9 >= 8 || 6 < 5)";
     // const source = "2 ^ 3 ^ 4";
-    const source = "1 + 1";
+    const source = "(1 != 3) && (2 < 1)";
 
     var lex = try lexer.Lexer.init(source, arena_alloc);
     defer lex.deinit();
@@ -182,5 +182,5 @@ test "parse int literal" {
     var check = checker.Checker.init(arena_alloc, t.items);
     const cs = try check.check();
 
-    std.debug.print("\n{any}\n", .{cs.items[0].*});
+    utils.pretty_print_checked_expression(cs.items[0].*.expr.*);
 }

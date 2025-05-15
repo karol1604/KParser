@@ -179,7 +179,7 @@ test "parse int literal" {
         std.debug.print("---------\n", .{});
     }
 
-    var check = checker.Checker.init(arena_alloc, t.items);
+    var check = try checker.Checker.init(arena_alloc, t.items);
     const cs = try check.check();
     utils.pretty_print_checked_expression(cs.items[0].*.expr.*);
 }
@@ -202,11 +202,22 @@ test "read from file" {
     defer lex.deinit();
     try lex.tokenize();
 
+    for (lex.tokens.items, 0..) |_, i| {
+        std.debug.print("   > {s}\n", .{lex.tokens.items[i]});
+    }
+
     var p = parser.Parser.init(lex.tokens.items, arena_alloc);
     const t = try p.parse();
     defer t.deinit();
 
-    var check = checker.Checker.init(arena_alloc, t.items);
+    std.debug.print("---------\n", .{});
+    for (t.items) |item| {
+        std.debug.print("   ", .{});
+        try utils.pretty_print_statement(item.*);
+        std.debug.print("---------\n", .{});
+    }
+
+    var check = try checker.Checker.init(arena_alloc, t.items);
     const cs = try check.check();
     for (cs.items) |item| {
         utils.pretty_print_checked_expression(item.*.expr.*);

@@ -11,9 +11,10 @@ pub const Statement = struct {
 pub const StatementKind = union(enum) {
     ExpressionStatement: *const Expression,
 
-    LetStatement: struct {
+    VariableDeclaration: struct {
         name: []const u8,
         value: *const Expression,
+        type: ?[]const u8,
     },
 
     ReturnStatement: struct {

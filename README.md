@@ -15,3 +15,15 @@ I'm also not sure about the `Checker` implementation. I've never written one bef
 ## Todo
 - [x] Pipe `Span` into `Expression` and `Statement`. For now, we literally ignore any position info LOL
 - Make some kind of `Diagnostic` struct or wtv for error handling bc now it's basically inexistent
+
+## Syntax (WIP)
+This is the syntax I'd like this language to have. This is subject to change
+```
+-- vars
+let x := 12;
+let y: Int = 13;
+
+-- functions
+let f : Int -> (Int, Int)
+f(n) = (n, 2*n);
+```

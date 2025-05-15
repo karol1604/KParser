@@ -102,6 +102,12 @@ fn prettyPrintRecCheck(
             // right is last
             prettyPrintRecCheck(b.right.*, depth + 1, treeLines, true);
         },
+        .VariableDeclaration => |var_decl| {
+            std.debug.print("VariableDecl {s} (type {d})\n", .{ var_decl.name, expr.type_id });
+            treeLines[depth] = !isLast;
+            prettyPrintRecCheck(var_decl.value.*, depth + 1, treeLines, true);
+        },
+        // else => {},
     }
 }
 
@@ -109,8 +115,12 @@ fn prettyPrintRecCheck(
 pub fn pretty_print_statement(stmt: ast.Statement) !void {
     try switch (stmt.kind) {
         .ExpressionStatement => |expr| pretty_print_expression(expr.*),
-        .LetStatement => |statement| {
-            std.debug.print("LetStatement {s} =\n", .{statement.name});
+        .VariableDeclaration => |statement| {
+            if (statement.type) |ty| {
+                std.debug.print("VariableDecl {s} ({s}) =\n", .{ statement.name, ty });
+            } else {
+                std.debug.print("VariableDecl {s} =\n", .{statement.name});
+            }
             std.debug.print("   ", .{});
             pretty_print_expression(statement.value.*);
         },

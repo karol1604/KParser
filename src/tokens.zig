@@ -35,22 +35,29 @@ pub const TokenType = union(enum) {
     True,
     False,
 
-    Let,
+    // Keywords
+    KeywordLet,
 
     Comma,
     Dot,
     Semicolon,
+    Colon,
 
     Identifier: []const u8,
     IntLiteral: i64,
 
     Eof,
+
+    pub fn format(self: TokenType, comptime _: []const u8, _: std.fmt.FormatOptions, writer: anytype) !void {
+        const type_str = token_type_to_string(self);
+        try writer.print("{s}", .{type_str});
+    }
 };
 
 pub const Keywords = std.StaticStringMap(TokenType).initComptime(.{
     .{ "true", .True },
     .{ "false", .False },
-    .{ "let", .Let },
+    .{ "let", .KeywordLet },
 });
 
 pub fn token_type_to_string(token_type: TokenType) []const u8 {
@@ -86,11 +93,12 @@ pub fn token_type_to_string(token_type: TokenType) []const u8 {
         .True => return "true",
         .False => return "false",
 
-        .Let => return "let",
+        .KeywordLet => return "KW_let",
 
         .Comma => return ",",
         .Dot => return ".",
         .Semicolon => return ";",
+        .Colon => return ":",
 
         .Identifier => |name| return name,
         .IntLiteral => |_| return "IntLiteral",

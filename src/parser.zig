@@ -62,16 +62,24 @@ pub const Parser = struct {
 
     fn parse_statement(self: *Parser) !*Statement {
         return switch (self.current_token().type) {
-            .Let => self.parse_let_statement(),
+            .KeywordLet => self.parse_variable_declaration(),
             else => self.parse_expression_statement(),
         };
     }
 
-    fn parse_let_statement(self: *Parser) !*Statement {
+    fn parse_variable_declaration(self: *Parser) !*Statement {
         const start_span = self.current_token().span;
         self.advance(); // consume let
 
         const name = try self.expect_ident();
+        try self.expect_token(.Colon);
+
+        var ty: ?[]const u8 = null;
+
+        if (self.current_token().type == .Identifier) {
+            ty = try self.expect_ident();
+        }
+
         try self.expect_token(.Equal);
         const val = try self.parse_expression(.Lowest);
 
@@ -101,9 +109,10 @@ pub const Parser = struct {
             },
         }
         return self.make_statement_pointer(Statement{
-            .kind = .{ .LetStatement = .{
+            .kind = .{ .VariableDeclaration = .{
                 .name = name,
                 .value = val,
+                .type = ty,
             } },
             .span = Span.sum(start_span, end_span),
         });
@@ -145,7 +154,7 @@ pub const Parser = struct {
             .True, .False => try self.parse_bool_literal(),
             .Plus, .Minus, .Bang => try self.parse_unary_expression(),
             else => {
-                std.debug.print("Error: No prefix parse function for token type {any} at {any}\n", .{
+                std.debug.print("Error: No prefix parse function for token type `{s}` at {any}\n", .{
                     self.current_token().type, self.current_token().span,
                 });
                 return error.NoParseFunctionForTokenType;
@@ -289,6 +298,10 @@ pub const Parser = struct {
 
     fn expect_token(self: *Parser, token_type: TokenType) !void {
         if (std.meta.activeTag(self.current_token().type) != token_type) {
+            std.debug.print(
+                "Error: Expected token `{s}` but got `{s}` at {any}\n",
+                .{ token_type, self.current_token().type, self.current_token().span },
+            );
             return error.UnexpectedTokenType;
         }
         self.advance();

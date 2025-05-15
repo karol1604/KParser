@@ -5,7 +5,7 @@ const span_ = @import("span.zig");
 
 const Span = span_.Span;
 
-const TypeId = u32;
+const TypeId = usize;
 
 const INT_TYPE_ID: TypeId = 0;
 const BOOL_TYPE_ID: TypeId = 1;
@@ -34,16 +34,28 @@ const CheckedExpressionData = union(enum) {
         operator: ast.BinaryOperator,
         right: *const CheckedExpression,
     },
+
+    VariableDeclaration: struct {
+        name: []const u8,
+        value: *const CheckedExpression,
+    },
 };
 
 pub const Checker = struct {
     alloc: std.mem.Allocator,
     statements: []*const ast.Statement,
+    types: std.ArrayList([]const u8),
 
-    pub fn init(alloc: std.mem.Allocator, stmts: []*const ast.Statement) Checker {
+    pub fn init(alloc: std.mem.Allocator, stmts: []*const ast.Statement) !Checker {
+        var types = std.ArrayList([]const u8).init(alloc);
+        errdefer types.deinit();
+        try types.append("Int");
+        try types.append("Bool");
+
         return Checker{
             .alloc = alloc,
             .statements = stmts,
+            .types = types,
         };
     }
 
@@ -67,14 +79,37 @@ pub const Checker = struct {
     }
 
     fn check_statement(self: *Checker, stmt: *const ast.Statement) !*CheckedStatement {
-        const expr = switch (stmt.*.kind) {
-            ast.StatementKind.ExpressionStatement => |expr_stmt| try self.check_expression(expr_stmt, null),
+        var expr: *const CheckedExpression = undefined;
+        switch (stmt.*.kind) {
+            ast.StatementKind.ExpressionStatement => |expr_stmt| {
+                expr = try self.check_expression(expr_stmt, null);
+            },
+            ast.StatementKind.VariableDeclaration => |var_decl| {
+                const value = try self.check_expression(var_decl.value, self.lookup_type(var_decl.type));
+                expr = try self.typed_expression(.{
+                    .VariableDeclaration = .{
+                        .name = var_decl.name,
+                        .value = value,
+                    },
+                }, stmt.*.span, value.type_id, self.lookup_type(var_decl.type));
+            },
             else => return error.NotYetImplemented,
-        };
+        }
 
-        return self.make_pointer(CheckedStatement, CheckedStatement{
+        return try self.make_pointer(CheckedStatement, CheckedStatement{
             .expr = expr,
         });
+    }
+
+    fn lookup_type(self: *Checker, name_: ?[]const u8) ?TypeId {
+        if (name_) |name| {
+            for (self.types.items, 0..) |type_name, index| {
+                if (std.mem.eql(u8, type_name, name)) {
+                    return @as(TypeId, index);
+                }
+            }
+        }
+        return null;
     }
 
     fn check_expression(self: *Checker, expr: *const ast.Expression, type_hint: ?TypeId) !*CheckedExpression {

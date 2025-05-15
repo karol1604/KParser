@@ -117,6 +117,7 @@ pub const Lexer = struct {
             ',' => try self.add_token(.Comma, .{ .start = tok_start_loc, .end = self.current_location() }),
             '.' => try self.add_token(.Dot, .{ .start = tok_start_loc, .end = self.current_location() }),
             ';' => try self.add_token(.Semicolon, .{ .start = tok_start_loc, .end = self.current_location() }),
+            ':' => try self.add_token(.Colon, .{ .start = tok_start_loc, .end = self.current_location() }),
 
             '+' => try self.add_token(.Plus, .{ .start = tok_start_loc, .end = self.current_location() }),
             '-' => try self.add_token(.Minus, .{ .start = tok_start_loc, .end = self.current_location() }),

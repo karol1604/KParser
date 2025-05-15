@@ -1,6 +1,8 @@
-# KParser
-I don't even know how many times i've tried to build this parser... eh
+# Eigen
+I don't even know how many times i've tried to build this... eh
 But this time, i'll actuallt try to finish it to some degree!
+
+I'd really like this language to resemble a math paper to some degree so the syntax is gonna be pretty intresting.
 
 Please ignore the error handling code. It's quite annoying to make good errors in zig and i'm still thinking about the good implementation here.
 
@@ -14,7 +16,9 @@ I'm also not sure about the `Checker` implementation. I've never written one bef
 
 ## Todo
 - [x] Pipe `Span` into `Expression` and `Statement`. For now, we literally ignore any position info LOL
-- Make some kind of `Diagnostic` struct or wtv for error handling bc now it's basically inexistent
+- [ ] Make some kind of `Diagnostic` struct or wtv for error handling bc now it's basically inexistent
+- [ ] Add a notion of `Scope` or smth in the checker
+- [ ] Think about types and how should they work
 
 ## Syntax (WIP)
 This is the syntax I'd like this language to have. This is subject to change
@@ -24,6 +28,13 @@ let x := 12;
 let y: Int = 13;
 
 -- functions
-let f : Int -> (Int, Int)
-f(n) = (n, 2*n);
+let f : Int -> (Int, Int) = n |-> {
+    let foo := num + 1;
+    (foo, 2*n);
+};
+
+let f := n |-> {
+    let foo := num + 1;
+    (foo, 2*n);
+};
 ```

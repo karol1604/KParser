@@ -1,4 +1,7 @@
-let a : Int = 1 == 1;
+let a : Int = 1 + 1;
+let b : Bool = true;
+let c : Bool = 1 <= 2 + 1;
+
 1;
 
 (2 + 1) * 7 == 1;

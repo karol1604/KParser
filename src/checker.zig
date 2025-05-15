@@ -7,8 +7,9 @@ const Span = span_.Span;
 
 const TypeId = usize;
 
-const INT_TYPE_ID: TypeId = 0;
-const BOOL_TYPE_ID: TypeId = 1;
+const EMPTY_TYPE_ID: TypeId = 0;
+const INT_TYPE_ID: TypeId = 1;
+const BOOL_TYPE_ID: TypeId = 2;
 
 const CheckedStatement = struct {
     expr: *const CheckedExpression,
@@ -43,12 +44,13 @@ const CheckedExpressionData = union(enum) {
 
 pub const Checker = struct {
     alloc: std.mem.Allocator,
-    statements: []*const ast.Statement,
+    statements: []*ast.Statement,
     types: std.ArrayList([]const u8),
 
-    pub fn init(alloc: std.mem.Allocator, stmts: []*const ast.Statement) !Checker {
+    pub fn init(alloc: std.mem.Allocator, stmts: []*ast.Statement) !Checker {
         var types = std.ArrayList([]const u8).init(alloc);
         errdefer types.deinit();
+        try types.append("Empty");
         try types.append("Int");
         try types.append("Bool");
 
@@ -85,13 +87,23 @@ pub const Checker = struct {
                 expr = try self.check_expression(expr_stmt, null);
             },
             ast.StatementKind.VariableDeclaration => |var_decl| {
-                const value = try self.check_expression(var_decl.value, self.lookup_type(var_decl.type));
+                const expected_type = self.lookup_type(var_decl.type);
+
+                // really?
+                if (expected_type == null) {
+                    if (var_decl.type) |type_name| {
+                        std.debug.print("Unknown type `{s}` at {any}\n", .{ type_name, stmt.*.span });
+                    }
+                    return error.UnknownType;
+                }
+
+                const value = try self.check_expression(var_decl.value, expected_type);
                 expr = try self.typed_expression(.{
                     .VariableDeclaration = .{
                         .name = var_decl.name,
                         .value = value,
                     },
-                }, stmt.*.span, value.type_id, self.lookup_type(var_decl.type));
+                }, stmt.*.span, EMPTY_TYPE_ID, null);
             },
             else => return error.NotYetImplemented,
         }

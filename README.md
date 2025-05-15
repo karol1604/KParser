@@ -33,7 +33,7 @@ let f : Int -> (Int, Int) = n |-> {
     (foo, 2*n);
 };
 
-let f := n |-> {
+let f := n -> {
     let foo := num + 1;
     (foo, 2*n);
 };

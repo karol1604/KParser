@@ -49,8 +49,8 @@ pub const TokenType = union(enum) {
     Eof,
 
     pub fn format(self: TokenType, comptime _: []const u8, _: std.fmt.FormatOptions, writer: anytype) !void {
-        const type_str = token_type_to_string(self);
-        try writer.print("{s}", .{type_str});
+        const typeStr = tokenTypeToString(self);
+        try writer.print("{s}", .{typeStr});
     }
 };
 
@@ -60,8 +60,8 @@ pub const Keywords = std.StaticStringMap(TokenType).initComptime(.{
     .{ "let", .KeywordLet },
 });
 
-pub fn token_type_to_string(token_type: TokenType) []const u8 {
-    switch (token_type) {
+pub fn tokenTypeToString(tokenType: TokenType) []const u8 {
+    switch (tokenType) {
         .Plus => return "+",
         .Minus => return "-",
         .Star => return "*",
@@ -93,7 +93,7 @@ pub fn token_type_to_string(token_type: TokenType) []const u8 {
         .True => return "true",
         .False => return "false",
 
-        .KeywordLet => return "KW_let",
+        .KeywordLet => return "KWLet",
 
         .Comma => return ",",
         .Dot => return ".",
@@ -112,7 +112,7 @@ pub const Token = struct {
     span: Span,
 
     pub fn format(self: Token, comptime _: []const u8, _: std.fmt.FormatOptions, writer: anytype) !void {
-        const type_str = token_type_to_string(self.type);
+        const typeStr = tokenTypeToString(self.type);
         switch (self.type) {
             .Identifier => |name| {
                 try writer.print("Ident({s}) at ({d}..{d}) on line {d} (offset: [{d}..{d}])", .{
@@ -136,7 +136,7 @@ pub const Token = struct {
             },
             else => {
                 try writer.print("{s} at ({d}..{d}) on line {d} (offset: [{d}..{d}])", .{
-                    type_str,
+                    typeStr,
                     self.span.start.column,
                     self.span.end.column,
                     self.span.start.line,

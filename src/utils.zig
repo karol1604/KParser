@@ -2,19 +2,19 @@ const std = @import("std");
 const ast = @import("ast.zig");
 const checker = @import("checker.zig");
 
-pub fn is_digit(c: u8) bool {
+pub fn isDigit(c: u8) bool {
     return c >= '0' and c <= '9';
 }
 
-pub fn is_alpha(c: u8) bool {
+pub fn isAlpha(c: u8) bool {
     return (c >= 'a' and c <= 'z') or (c >= 'A' and c <= 'Z');
 }
 
-pub fn is_alpha_numeric(c: u8) bool {
-    return is_alpha(c) or is_digit(c);
+pub fn isAlphaNumeric(c: u8) bool {
+    return isAlpha(c) or isDigit(c);
 }
 
-pub fn read_file(allocator: std.mem.Allocator, path: []const u8) ![]u8 {
+pub fn readFile(allocator: std.mem.Allocator, path: []const u8) ![]u8 {
     const cwd = std.fs.cwd();
     // Open the file for reading
     const file = try cwd.openFile(path, .{ .mode = .read_only });
@@ -27,7 +27,7 @@ pub fn read_file(allocator: std.mem.Allocator, path: []const u8) ![]u8 {
 const MAX_DEPTH = 64;
 
 // ********** CHECKED EXPRESSION PRETTY PRINTING *********
-pub fn pretty_print_checked_expression(expr: checker.CheckedExpression) void {
+pub fn prettyPrintCheckedExpression(expr: checker.CheckedExpression) void {
     var treeLines: [MAX_DEPTH]bool = undefined;
     prettyPrintRecCheck(expr, 0, &treeLines, true);
 }
@@ -56,21 +56,21 @@ fn prettyPrintRecCheck(
     // 3) Print this node
     switch (expr.data) {
         .IntLiteral => |val| {
-            std.debug.print("IntLiteral {d} (type {d})\n", .{ val, expr.type_id });
+            std.debug.print("IntLiteral {d} (type {d})\n", .{ val, expr.typeId });
         },
         .Identifier => |name| {
             std.debug.print("Identifier {s}\n", .{name});
         },
         .BoolLiteral => |val| {
-            std.debug.print("BoolLiteral {s} (type {d})\n", .{ if (val) "true" else "false", expr.type_id });
+            std.debug.print("BoolLiteral {s} (type {d})\n", .{ if (val) "true" else "false", expr.typeId });
         },
         .Unary => |u| {
-            const op_str = switch (u.operator) {
+            const opStr = switch (u.operator) {
                 .Plus => "+",
                 .Minus => "-",
                 .Not => "!",
             };
-            std.debug.print("Unary {s} (type {d})\n", .{ op_str, expr.type_id });
+            std.debug.print("Unary {s} (type {d})\n", .{ opStr, expr.typeId });
 
             // mark at this depth whether we should draw a
             // vertical bar for deeper siblings
@@ -79,7 +79,7 @@ fn prettyPrintRecCheck(
             prettyPrintRecCheck(u.right.*, depth + 1, treeLines, true);
         },
         .Binary => |b| {
-            const op_str = switch (b.operator) {
+            const opStr = switch (b.operator) {
                 .Plus => "+",
                 .Minus => "-",
                 .Multiply => "*",
@@ -94,7 +94,7 @@ fn prettyPrintRecCheck(
                 .LogicalAnd => "&&",
                 .LogicalOr => "||",
             };
-            std.debug.print("Binary {s} (type {d})\n", .{ op_str, expr.type_id });
+            std.debug.print("Binary {s} (type {d})\n", .{ opStr, expr.typeId });
 
             treeLines[depth] = !isLast;
             // left is not last
@@ -102,19 +102,19 @@ fn prettyPrintRecCheck(
             // right is last
             prettyPrintRecCheck(b.right.*, depth + 1, treeLines, true);
         },
-        .VariableDeclaration => |var_decl| {
-            std.debug.print("VariableDecl {s} (type {d})\n", .{ var_decl.name, expr.type_id });
+        .VariableDeclaration => |varDecl| {
+            std.debug.print("VariableDecl {s} (type {d})\n", .{ varDecl.name, expr.typeId });
             treeLines[depth] = !isLast;
-            prettyPrintRecCheck(var_decl.value.*, depth + 1, treeLines, true);
+            prettyPrintRecCheck(varDecl.value.*, depth + 1, treeLines, true);
         },
         // else => {},
     }
 }
 
 // ********* EXPRESSION TREE PRETTY PRINTING *********
-pub fn pretty_print_statement(stmt: ast.Statement) !void {
+pub fn prettyPrintStatement(stmt: ast.Statement) !void {
     try switch (stmt.kind) {
-        .ExpressionStatement => |expr| pretty_print_expression(expr.*),
+        .ExpressionStatement => |expr| prettyPrintExpression(expr.*),
         .VariableDeclaration => |statement| {
             if (statement.type) |ty| {
                 std.debug.print("VariableDecl {s} ({s}) =\n", .{ statement.name, ty });
@@ -122,13 +122,13 @@ pub fn pretty_print_statement(stmt: ast.Statement) !void {
                 std.debug.print("VariableDecl {s} =\n", .{statement.name});
             }
             std.debug.print("   ", .{});
-            pretty_print_expression(statement.value.*);
+            prettyPrintExpression(statement.value.*);
         },
         else => error.NoPrettyPrintForStatementType,
     };
 }
 /// Pretty prints an expression tree
-pub fn pretty_print_expression(expr: ast.Expression) void {
+pub fn prettyPrintExpression(expr: ast.Expression) void {
     var treeLines: [MAX_DEPTH]bool = undefined;
     prettyPrintRec(expr.kind, 0, &treeLines, true);
 }
@@ -166,12 +166,12 @@ fn prettyPrintRec(
             std.debug.print("BoolLiteral {s}\n", .{if (val) "true" else "false"});
         },
         .Unary => |u| {
-            const op_str = switch (u.operator) {
+            const opStr = switch (u.operator) {
                 .Plus => "+",
                 .Minus => "-",
                 .Not => "!",
             };
-            std.debug.print("Unary {s}\n", .{op_str});
+            std.debug.print("Unary {s}\n", .{opStr});
 
             // mark at this depth whether we should draw a
             // vertical bar for deeper siblings
@@ -180,7 +180,7 @@ fn prettyPrintRec(
             prettyPrintRec(u.right.*.kind, depth + 1, treeLines, true);
         },
         .Binary => |b| {
-            const op_str = switch (b.operator) {
+            const opStr = switch (b.operator) {
                 .Plus => "+",
                 .Minus => "-",
                 .Multiply => "*",
@@ -195,7 +195,7 @@ fn prettyPrintRec(
                 .LogicalAnd => "&&",
                 .LogicalOr => "||",
             };
-            std.debug.print("Binary {s}\n", .{op_str});
+            std.debug.print("Binary {s}\n", .{opStr});
 
             treeLines[depth] = !isLast;
             // left is not last

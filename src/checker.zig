@@ -16,7 +16,7 @@ const CheckedStatement = struct {
 };
 
 pub const CheckedExpression = struct {
-    type_id: TypeId,
+    typeId: TypeId,
     data: CheckedExpressionData,
 };
 
@@ -61,46 +61,46 @@ pub const Checker = struct {
         };
     }
 
-    fn make_pointer(self: *const Checker, comptime T: type, val: T) !*T {
+    fn makePointer(self: *const Checker, comptime T: type, val: T) !*T {
         const ptr = try self.alloc.create(T);
         ptr.* = val;
         return ptr;
     }
 
     pub fn check(self: *Checker) !std.ArrayList(*CheckedStatement) {
-        var checked_statements = std.ArrayList(*CheckedStatement).init(self.alloc);
-        errdefer checked_statements.deinit();
+        var checkedStatements = std.ArrayList(*CheckedStatement).init(self.alloc);
+        errdefer checkedStatements.deinit();
 
         for (self.statements) |stmt| {
-            const checked_stmt = try self.check_statement(stmt);
-            try checked_statements.append(checked_stmt);
-            // Do something with checked_stmt
+            const checkedStmt = try self.checkStatement(stmt);
+            try checkedStatements.append(checkedStmt);
+            // Do something with checkedStmt
         }
 
-        return checked_statements;
+        return checkedStatements;
     }
 
-    fn check_statement(self: *Checker, stmt: *const ast.Statement) !*CheckedStatement {
+    fn checkStatement(self: *Checker, stmt: *const ast.Statement) !*CheckedStatement {
         var expr: *const CheckedExpression = undefined;
         switch (stmt.*.kind) {
-            ast.StatementKind.ExpressionStatement => |expr_stmt| {
-                expr = try self.check_expression(expr_stmt, null);
+            ast.StatementKind.ExpressionStatement => |exprStmt| {
+                expr = try self.checkExpression(exprStmt, null);
             },
-            ast.StatementKind.VariableDeclaration => |var_decl| {
-                const expected_type = self.lookup_type(var_decl.type);
+            ast.StatementKind.VariableDeclaration => |varDecl| {
+                const expectedType = self.lookupType(varDecl.type);
 
                 // really?
-                if (expected_type == null) {
-                    if (var_decl.type) |type_name| {
-                        std.debug.print("Unknown type `{s}` at {any}\n", .{ type_name, stmt.*.span });
+                if (expectedType == null) {
+                    if (varDecl.type) |typeName| {
+                        std.debug.print("Unknown type `{s}` at {any}\n", .{ typeName, stmt.*.span });
                     }
                     return error.UnknownType;
                 }
 
-                const value = try self.check_expression(var_decl.value, expected_type);
-                expr = try self.typed_expression(.{
+                const value = try self.checkExpression(varDecl.value, expectedType);
+                expr = try self.typedExpression(.{
                     .VariableDeclaration = .{
-                        .name = var_decl.name,
+                        .name = varDecl.name,
                         .value = value,
                     },
                 }, stmt.*.span, EMPTY_TYPE_ID, null);
@@ -108,15 +108,15 @@ pub const Checker = struct {
             else => return error.NotYetImplemented,
         }
 
-        return try self.make_pointer(CheckedStatement, CheckedStatement{
+        return try self.makePointer(CheckedStatement, CheckedStatement{
             .expr = expr,
         });
     }
 
-    fn lookup_type(self: *Checker, name_: ?[]const u8) ?TypeId {
+    fn lookupType(self: *Checker, name_: ?[]const u8) ?TypeId {
         if (name_) |name| {
-            for (self.types.items, 0..) |type_name, index| {
-                if (std.mem.eql(u8, type_name, name)) {
+            for (self.types.items, 0..) |typeName, index| {
+                if (std.mem.eql(u8, typeName, name)) {
                     return @as(TypeId, index);
                 }
             }
@@ -124,39 +124,39 @@ pub const Checker = struct {
         return null;
     }
 
-    fn check_expression(self: *Checker, expr: *const ast.Expression, type_hint: ?TypeId) !*CheckedExpression {
+    fn checkExpression(self: *Checker, expr: *const ast.Expression, typeHint: ?TypeId) !*CheckedExpression {
         switch (expr.*.kind) {
             .IntLiteral => |int| {
-                return try self.typed_expression(.{ .IntLiteral = int }, expr.*.span, INT_TYPE_ID, type_hint);
+                return try self.typedExpression(.{ .IntLiteral = int }, expr.*.span, INT_TYPE_ID, typeHint);
             },
             .BoolLiteral => |b| {
-                return try self.typed_expression(.{ .BoolLiteral = b }, expr.*.span, BOOL_TYPE_ID, type_hint);
+                return try self.typedExpression(.{ .BoolLiteral = b }, expr.*.span, BOOL_TYPE_ID, typeHint);
             },
 
             .Unary => |unary| {
                 switch (unary.operator) {
                     .Not => {
-                        const right = try self.check_expression(unary.right, BOOL_TYPE_ID);
-                        return try self.typed_expression(
+                        const right = try self.checkExpression(unary.right, BOOL_TYPE_ID);
+                        return try self.typedExpression(
                             .{ .Unary = .{
                                 .operator = unary.operator,
                                 .right = right,
                             } },
                             expr.*.span,
                             BOOL_TYPE_ID,
-                            type_hint,
+                            typeHint,
                         );
                     },
                     .Plus, .Minus => {
-                        const right = try self.check_expression(unary.right, INT_TYPE_ID);
-                        return try self.typed_expression(
+                        const right = try self.checkExpression(unary.right, INT_TYPE_ID);
+                        return try self.typedExpression(
                             .{ .Unary = .{
                                 .operator = unary.operator,
                                 .right = right,
                             } },
                             expr.*.span,
                             INT_TYPE_ID,
-                            type_hint,
+                            typeHint,
                         );
                     },
                 }
@@ -165,9 +165,9 @@ pub const Checker = struct {
             .Binary => |binary| {
                 switch (binary.operator) {
                     .Plus, .Minus, .Multiply, .Divide, .Exponent => {
-                        const left = try self.check_expression(binary.left, INT_TYPE_ID);
-                        const right = try self.check_expression(binary.right, INT_TYPE_ID);
-                        return try self.typed_expression(
+                        const left = try self.checkExpression(binary.left, INT_TYPE_ID);
+                        const right = try self.checkExpression(binary.right, INT_TYPE_ID);
+                        return try self.typedExpression(
                             .{ .Binary = .{
                                 .left = left,
                                 .operator = binary.operator,
@@ -175,13 +175,13 @@ pub const Checker = struct {
                             } },
                             expr.*.span,
                             INT_TYPE_ID,
-                            type_hint,
+                            typeHint,
                         );
                     },
                     .LessThan, .GreaterThan, .LessThanOrEqual, .GreaterThanOrEqual => {
-                        const left = try self.check_expression(binary.left, INT_TYPE_ID);
-                        const right = try self.check_expression(binary.right, INT_TYPE_ID);
-                        return try self.typed_expression(
+                        const left = try self.checkExpression(binary.left, INT_TYPE_ID);
+                        const right = try self.checkExpression(binary.right, INT_TYPE_ID);
+                        return try self.typedExpression(
                             .{ .Binary = .{
                                 .left = left,
                                 .operator = binary.operator,
@@ -189,14 +189,14 @@ pub const Checker = struct {
                             } },
                             expr.*.span,
                             BOOL_TYPE_ID,
-                            type_hint,
+                            typeHint,
                         );
                     },
                     .Equal, .NotEqual => {
-                        const left = try self.check_expression(binary.left, null);
-                        const right = try self.check_expression(binary.right, left.type_id);
+                        const left = try self.checkExpression(binary.left, null);
+                        const right = try self.checkExpression(binary.right, left.typeId);
 
-                        return try self.typed_expression(
+                        return try self.typedExpression(
                             .{ .Binary = .{
                                 .left = left,
                                 .operator = binary.operator,
@@ -204,14 +204,14 @@ pub const Checker = struct {
                             } },
                             expr.*.span,
                             BOOL_TYPE_ID,
-                            type_hint,
+                            typeHint,
                         );
                     },
                     .LogicalAnd, .LogicalOr => {
-                        const left = try self.check_expression(binary.left, BOOL_TYPE_ID);
-                        const right = try self.check_expression(binary.right, BOOL_TYPE_ID);
+                        const left = try self.checkExpression(binary.left, BOOL_TYPE_ID);
+                        const right = try self.checkExpression(binary.right, BOOL_TYPE_ID);
 
-                        return try self.typed_expression(
+                        return try self.typedExpression(
                             .{ .Binary = .{
                                 .left = left,
                                 .operator = binary.operator,
@@ -219,7 +219,7 @@ pub const Checker = struct {
                             } },
                             expr.*.span,
                             BOOL_TYPE_ID,
-                            type_hint,
+                            typeHint,
                         );
                     },
                     // else => {
@@ -234,20 +234,20 @@ pub const Checker = struct {
         }
     }
 
-    fn typed_expression(self: *Checker, res: CheckedExpressionData, span: Span, res_type: TypeId, type_hint: ?TypeId) !*CheckedExpression {
-        if (type_hint) |hint| {
-            if (res_type != hint) {
-                std.debug.print("Type mismatch: expected type {d}, got {d} at {s}\n", .{ hint, res_type, span });
+    fn typedExpression(self: *Checker, res: CheckedExpressionData, span: Span, resType: TypeId, typeHint: ?TypeId) !*CheckedExpression {
+        if (typeHint) |hint| {
+            if (resType != hint) {
+                std.debug.print("Type mismatch: expected type {d}, got {d} at {s}\n", .{ hint, resType, span });
                 return error.TypeMismatch;
             } else {
-                return self.make_pointer(CheckedExpression, CheckedExpression{
-                    .type_id = res_type,
+                return self.makePointer(CheckedExpression, CheckedExpression{
+                    .typeId = resType,
                     .data = res,
                 });
             }
         } else {
-            return self.make_pointer(CheckedExpression, CheckedExpression{
-                .type_id = res_type,
+            return self.makePointer(CheckedExpression, CheckedExpression{
+                .typeId = resType,
                 .data = res,
             });
         }

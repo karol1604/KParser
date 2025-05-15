@@ -36,13 +36,13 @@ pub const Parser = struct {
         _ = self;
     }
 
-    fn make_expression_pointer(self: *const Parser, expr: Expression) !*Expression {
+    fn makeExpressionPointer(self: *const Parser, expr: Expression) !*Expression {
         const ptr = try self.alloc.create(Expression);
         ptr.* = expr;
         return ptr;
     }
 
-    fn make_statement_pointer(self: *const Parser, stmt: Statement) !*Statement {
+    fn makeStatementPointer(self: *const Parser, stmt: Statement) !*Statement {
         const ptr = try self.alloc.create(Statement);
         ptr.* = stmt;
         return ptr;
@@ -52,163 +52,163 @@ pub const Parser = struct {
         var statements = std.ArrayList(*Statement).init(self.alloc);
         errdefer statements.deinit();
 
-        while (self.current_token().type != .Eof) {
-            const stmt = try self.parse_statement();
+        while (self.currentToken().type != .Eof) {
+            const stmt = try self.parseStatement();
             try statements.append(stmt);
         }
 
         return statements;
     }
 
-    fn parse_statement(self: *Parser) !*Statement {
-        return switch (self.current_token().type) {
-            .KeywordLet => self.parse_variable_declaration(),
-            else => self.parse_expression_statement(),
+    fn parseStatement(self: *Parser) !*Statement {
+        return switch (self.currentToken().type) {
+            .KeywordLet => self.parseVariableDeclaration(),
+            else => self.parseExpressionStatement(),
         };
     }
 
-    fn parse_variable_declaration(self: *Parser) !*Statement {
-        const start_span = self.current_token().span;
+    fn parseVariableDeclaration(self: *Parser) !*Statement {
+        const startSpan = self.currentToken().span;
         self.advance(); // consume let
 
-        const name = try self.expect_ident();
-        try self.expect_token(.Colon);
+        const name = try self.expectIdent();
+        try self.expectToken(.Colon);
 
         var ty: ?[]const u8 = null;
 
-        if (self.current_token().type == .Identifier) {
-            ty = try self.expect_ident();
+        if (self.currentToken().type == .Identifier) {
+            ty = try self.expectIdent();
         }
 
-        try self.expect_token(.Equal);
-        const val = try self.parse_expression(.Lowest);
+        try self.expectToken(.Equal);
+        const val = try self.parseExpression(.Lowest);
 
-        var end_span = val.span;
+        var endSpan = val.span;
 
-        switch (self.current_token().type) {
+        switch (self.currentToken().type) {
             .Semicolon => {
-                end_span = self.current_token().span;
+                endSpan = self.currentToken().span;
                 self.advance(); // Consume the semicolon
             },
             .Eof => {},
             else => {
                 std.debug.print(
                     "Error: Expected semicolon or EOF after let statement value at {any}\n",
-                    .{self.current_token().span},
+                    .{self.currentToken().span},
                 );
 
                 // try self.diagnostics.append(
                 // Diagnostic{
                 //     .kind = .ParserError,
                 //     .message = "Expected semicolon or EOF after let statement value",
-                //     .span = self.current_token().span,
+                //     .span = self.currentToken().span,
                 // },
                 // );
 
                 return error.ExpectedSemicolonOrEofAfterExpression;
             },
         }
-        return self.make_statement_pointer(Statement{
+        return self.makeStatementPointer(Statement{
             .kind = .{ .VariableDeclaration = .{
                 .name = name,
                 .value = val,
                 .type = ty,
             } },
-            .span = Span.sum(start_span, end_span),
+            .span = Span.sum(startSpan, endSpan),
         });
     }
 
-    fn parse_expression_statement(self: *Parser) !*Statement {
-        const expr = try self.parse_expression(.Lowest);
-        const start_span = expr.span;
-        var end_span = start_span;
+    fn parseExpressionStatement(self: *Parser) !*Statement {
+        const expr = try self.parseExpression(.Lowest);
+        const startSpan = expr.span;
+        var endSpan = startSpan;
         // Not sure about the first if part
-        // if (self.peek().type == .Eof or self.current_token().type == .Semicolon) {
+        // if (self.peek().type == .Eof or self.currentToken().type == .Semicolon) {
         //     self.advance();
         // } else return error.ExpectedSemicolon;
 
-        switch (self.current_token().type) {
+        switch (self.currentToken().type) {
             .Semicolon => {
-                end_span = self.current_token().span;
+                endSpan = self.currentToken().span;
                 self.advance(); // Consume the semicolon
             },
             .Eof => {},
             else => {
                 // The expression was parsed, but it's followed by an unexpected token instead of a semicolon or EOF.
-                std.debug.print("Error: Unexpected token at {s}, at {any}\n", .{ token.token_type_to_string(self.current_token().type), self.current_token().span });
+                std.debug.print("Error: Unexpected token at {s}, at {any}\n", .{ self.currentToken().type, self.currentToken().span });
                 return error.ExpectedSemicolonOrEofAfterExpression;
             },
         }
 
         const stmt = Statement{
             .kind = .{ .ExpressionStatement = expr },
-            .span = Span.sum(start_span, end_span),
+            .span = Span.sum(startSpan, endSpan),
         };
-        return try self.make_statement_pointer(stmt);
+        return try self.makeStatementPointer(stmt);
     }
 
-    fn parse_expression(self: *Parser, prec: Precedence) anyerror!*Expression {
-        var expr = switch (self.current_token().type) {
-            .IntLiteral => try self.parse_int_literal(),
-            .LParen => try self.parse_group_expression(),
-            .True, .False => try self.parse_bool_literal(),
-            .Plus, .Minus, .Bang => try self.parse_unary_expression(),
+    fn parseExpression(self: *Parser, prec: Precedence) anyerror!*Expression {
+        var expr = switch (self.currentToken().type) {
+            .IntLiteral => try self.parseIntLiteral(),
+            .LParen => try self.parseGroupExpression(),
+            .True, .False => try self.parseBoolLiteral(),
+            .Plus, .Minus, .Bang => try self.parseUnaryExpression(),
             else => {
                 std.debug.print("Error: No prefix parse function for token type `{s}` at {any}\n", .{
-                    self.current_token().type, self.current_token().span,
+                    self.currentToken().type, self.currentToken().span,
                 });
                 return error.NoParseFunctionForTokenType;
             },
         };
 
-        // while (self.current_prec() > @intFromEnum(prec)) {
+        // while (self.currentPrec() > @intFromEnum(prec)) {
         //     // we probably can abstrct this away into a single function call
-        //     switch (self.current_token().type) {
+        //     switch (self.currentToken().type) {
         //         .IntLiteral => return error.ConsecutiveInts, // TODO: this condition is actually never reached, fix this bug! (potentially replace > with >= but idk)
-        //         .Plus => expr = try self.parse_binary_expression(expr, .Plus, .Sum),
-        //         .Minus => expr = try self.parse_binary_expression(expr, .Minus, .Sum),
+        //         .Plus => expr = try self.parseBinaryExpression(expr, .Plus, .Sum),
+        //         .Minus => expr = try self.parseBinaryExpression(expr, .Minus, .Sum),
         //
-        //         .Star => expr = try self.parse_binary_expression(expr, .Multiply, .Product),
-        //         .Slash => expr = try self.parse_binary_expression(expr, .Divide, .Product),
+        //         .Star => expr = try self.parseBinaryExpression(expr, .Multiply, .Product),
+        //         .Slash => expr = try self.parseBinaryExpression(expr, .Divide, .Product),
         //
-        //         .DoubleEqual => expr = try self.parse_binary_expression(expr, .Equal, .Equality),
-        //         .NotEqual => expr = try self.parse_binary_expression(expr, .NotEqual, .Equality),
+        //         .DoubleEqual => expr = try self.parseBinaryExpression(expr, .Equal, .Equality),
+        //         .NotEqual => expr = try self.parseBinaryExpression(expr, .NotEqual, .Equality),
         //
-        //         .LessThan => expr = try self.parse_binary_expression(expr, .LessThan, .Comparison),
-        //         .GreaterThan => expr = try self.parse_binary_expression(expr, .GreaterThan, .Comparison),
-        //         .LessThanOrEqual => expr = try self.parse_binary_expression(expr, .LessThanOrEqual, .Comparison),
-        //         .GreaterThanOrEqual => expr = try self.parse_binary_expression(expr, .GreaterThanOrEqual, .Comparison),
+        //         .LessThan => expr = try self.parseBinaryExpression(expr, .LessThan, .Comparison),
+        //         .GreaterThan => expr = try self.parseBinaryExpression(expr, .GreaterThan, .Comparison),
+        //         .LessThanOrEqual => expr = try self.parseBinaryExpression(expr, .LessThanOrEqual, .Comparison),
+        //         .GreaterThanOrEqual => expr = try self.parseBinaryExpression(expr, .GreaterThanOrEqual, .Comparison),
         //
-        //         .DoubleAmpersand => expr = try self.parse_binary_expression(expr, .LogicalAnd, .Logical),
-        //         .DoublePipe => expr = try self.parse_binary_expression(expr, .LogicalOr, .Logical),
+        //         .DoubleAmpersand => expr = try self.parseBinaryExpression(expr, .LogicalAnd, .Logical),
+        //         .DoublePipe => expr = try self.parseBinaryExpression(expr, .LogicalOr, .Logical),
         //
-        //         .Caret => expr = try self.parse_binary_expression(expr, .Exponent, .Exponent),
+        //         .Caret => expr = try self.parseBinaryExpression(expr, .Exponent, .Exponent),
         //         .Eof => return expr,
         //         else => return error.InvalidOperator,
         //     }
         // }
-        while (self.current_token().type != .Semicolon and self.current_token().type != .Eof and @intFromEnum(prec) < self.current_prec()) {
-            const operator_type = self.current_token().type;
-            const semantic_op: ?BinaryOperator = get_binary_operator(operator_type);
+        while (self.currentToken().type != .Semicolon and self.currentToken().type != .Eof and @intFromEnum(prec) < self.currentPrec()) {
+            const operatorType = self.currentToken().type;
+            const semanticOp: ?BinaryOperator = getBinaryOperator(operatorType);
 
-            if (semantic_op == null) {
+            if (semanticOp == null) {
                 return expr;
             }
             // Check for the consecutive integers bug more directly
             // This check should ideally be before trying to parse a binary operator
-            // if (operator_type == .IntLiteral) { // This was the original TODO
-            //     std.debug.print("Error: Consecutive integer literals without operator at {any}\n", .{self.current_token().span});
+            // if (operatorType == .IntLiteral) { // This was the original TODO
+            //     std.debug.print("Error: Consecutive integer literals without operator at {any}\n", .{self.currentToken().span});
             //     return error.ConsecutiveInts;
             // }
 
-            expr = try self.parse_binary_expression(expr, semantic_op.?, self.get_token_prec(operator_type));
+            expr = try self.parseBinaryExpression(expr, semanticOp.?, self.getTokenPrec(operatorType));
         }
 
         return expr;
     }
 
-    fn get_binary_operator(token_type: TokenType) ?BinaryOperator {
-        return switch (token_type) {
+    fn getBinaryOperator(tokenType: TokenType) ?BinaryOperator {
+        return switch (tokenType) {
             .Plus => .Plus,
             .Minus => .Minus,
             .Star => .Multiply,
@@ -226,8 +226,8 @@ pub const Parser = struct {
         };
     }
 
-    fn get_unary_operator(token_type: TokenType) ?UnaryOperator {
-        return switch (token_type) {
+    fn getUnaryOperator(tokenType: TokenType) ?UnaryOperator {
+        return switch (tokenType) {
             .Plus => .Plus,
             .Minus => .Minus,
             .Bang => .Not,
@@ -235,80 +235,80 @@ pub const Parser = struct {
         };
     }
 
-    fn parse_unary_expression(self: *Parser) !*Expression {
-        const op_token = self.current_token();
-        const op = get_unary_operator(op_token.type) orelse return {
-            std.debug.print("Error: Invalid token for unary operator {any}\n", .{op_token});
+    fn parseUnaryExpression(self: *Parser) !*Expression {
+        const opToken = self.currentToken();
+        const op = getUnaryOperator(opToken.type) orelse return {
+            std.debug.print("Error: Invalid token for unary operator {any}\n", .{opToken});
             return error.InvalidUnaryOperator;
         };
 
         self.advance();
 
-        const rhs = try self.parse_expression(.Prefix);
+        const rhs = try self.parseExpression(.Prefix);
 
-        return self.make_expression_pointer(.{
+        return self.makeExpressionPointer(.{
             .kind = .{ .Unary = .{ .operator = op, .right = rhs } },
-            .span = Span.sum(op_token.span, rhs.span),
+            .span = Span.sum(opToken.span, rhs.span),
         });
     }
 
-    fn parse_group_expression(self: *Parser) !*Expression {
+    fn parseGroupExpression(self: *Parser) !*Expression {
         self.advance(); // consume '('
-        const expr = try self.parse_expression(.Lowest);
-        if (self.current_token().type != .RParen) {
+        const expr = try self.parseExpression(.Lowest);
+        if (self.currentToken().type != .RParen) {
             return error.ExpectedRParen;
         }
         self.advance(); // consume ')'
         return expr;
     }
 
-    fn is_operand_start(t: TokenType) bool {
+    fn isOperandStart(t: TokenType) bool {
         return switch (t) {
             .IntLiteral, .Identifier, .True, .False, .LParen => true,
             else => false,
         };
     }
 
-    fn parse_binary_expression(self: *Parser, lhs: *Expression, op: BinaryOperator, prec: Precedence) !*Expression {
+    fn parseBinaryExpression(self: *Parser, lhs: *Expression, op: BinaryOperator, prec: Precedence) !*Expression {
         self.advance();
 
-        // TODO: this is a hack, we should change this function's implementation. Maybe add a `allow_prefix` parameter?
-        // if (self.current_token().type == .Plus or self.current_token().type == .Minus or self.current_token().type == .Bang) {
+        // TODO: this is a hack, we should change this function's implementation. Maybe add a `allowPrefix` parameter?
+        // if (self.currentToken().type == .Plus or self.currentToken().type == .Minus or self.currentToken().type == .Bang) {
         //     return error.UnexpectedUnaryOperator;
         // }
-        // if (!is_operand_start(self.current_token().type)) {
-        //     std.debug.print("Error: Expected operand after binary operator at {any}\n", .{self.current_token().span});
+        // if (!isOperandStart(self.currentToken().type)) {
+        //     std.debug.print("Error: Expected operand after binary operator at {any}\n", .{self.currentToken().span});
         //     return error.UnexpectedUnaryAfterBinary;
         // }
 
         // TODO: THIS IS A MAJOR HACK. We should check if `op` is right associative
-        const right_prec_adjust = if (op == .Exponent) @intFromEnum(prec) - 1 else @intFromEnum(prec);
-        const rhs = try self.parse_expression(@as(Precedence, @enumFromInt(right_prec_adjust)));
+        const rightPrecAdjust = if (op == .Exponent) @intFromEnum(prec) - 1 else @intFromEnum(prec);
+        const rhs = try self.parseExpression(@as(Precedence, @enumFromInt(rightPrecAdjust)));
 
-        const expr_span = Span.sum(lhs.span, rhs.span);
-        return self.make_expression_pointer(.{
+        const exprSpan = Span.sum(lhs.span, rhs.span);
+        return self.makeExpressionPointer(.{
             .kind = .{ .Binary = .{
                 .left = lhs,
                 .operator = op,
                 .right = rhs,
             } },
-            .span = expr_span,
+            .span = exprSpan,
         });
     }
 
-    fn expect_token(self: *Parser, token_type: TokenType) !void {
-        if (std.meta.activeTag(self.current_token().type) != token_type) {
+    fn expectToken(self: *Parser, tokenType: TokenType) !void {
+        if (std.meta.activeTag(self.currentToken().type) != tokenType) {
             std.debug.print(
                 "Error: Expected token `{s}` but got `{s}` at {any}\n",
-                .{ token_type, self.current_token().type, self.current_token().span },
+                .{ tokenType, self.currentToken().type, self.currentToken().span },
             );
             return error.UnexpectedTokenType;
         }
         self.advance();
     }
 
-    fn expect_ident(self: *Parser) ![]const u8 {
-        switch (self.current_token().type) {
+    fn expectIdent(self: *Parser) ![]const u8 {
+        switch (self.currentToken().type) {
             .Identifier => |ident| {
                 self.advance();
                 return ident;
@@ -318,9 +318,9 @@ pub const Parser = struct {
     }
 
     // TODO: REMOVE THIS FUNCTION
-    fn expect_int(self: *Parser) !i64 {
-        const current = self.current_token();
-        switch (self.current_token().type) {
+    fn expectInt(self: *Parser) !i64 {
+        const current = self.currentToken();
+        switch (self.currentToken().type) {
             .IntLiteral => |int| {
                 self.advance();
                 return int;
@@ -334,9 +334,9 @@ pub const Parser = struct {
         }
     }
 
-    fn parse_bool_literal(self: *Parser) !*Expression {
-        const bool_token = self.current_token();
-        const value = switch (bool_token.type) {
+    fn parseBoolLiteral(self: *Parser) !*Expression {
+        const boolToken = self.currentToken();
+        const value = switch (boolToken.type) {
             .True => true,
             .False => false,
             else => unreachable,
@@ -344,24 +344,24 @@ pub const Parser = struct {
 
         self.advance();
 
-        return self.make_expression_pointer(.{
+        return self.makeExpressionPointer(.{
             .kind = .{ .BoolLiteral = value },
-            .span = bool_token.span,
+            .span = boolToken.span,
         });
     }
 
-    fn parse_int_literal(self: *Parser) !*Expression {
-        const int_token = self.current_token();
+    fn parseIntLiteral(self: *Parser) !*Expression {
+        const intToken = self.currentToken();
 
-        const value = switch (int_token.type) {
+        const value = switch (intToken.type) {
             .IntLiteral => |int| int,
             else => return error.ExpectedInt,
         };
 
         self.advance();
-        return try self.make_expression_pointer(.{
+        return try self.makeExpressionPointer(.{
             .kind = .{ .IntLiteral = value },
-            .span = int_token.span,
+            .span = intToken.span,
         });
     }
 
@@ -371,13 +371,13 @@ pub const Parser = struct {
         }
     }
 
-    fn current_token(self: *Parser) Token {
+    fn currentToken(self: *Parser) Token {
         // if (self.current >= self.tokens.len) {
-        //     const tok_span = Span{
+        //     const tokSpan = Span{
         //         .start = Location{ .line = self.line, .column = 0, .offset = 0 },
         //         .end = Location{ .line = self.line, .column = 0, .offset = 0 },
         //     };
-        //     return Token{ .type = .Eof, .span = tok_span };
+        //     return Token{ .type = .Eof, .span = tokSpan };
         // }
         return self.tokens[self.current];
     }
@@ -390,8 +390,8 @@ pub const Parser = struct {
         return self.tokens[self.current + 1];
     }
 
-    fn get_token_prec(_: *Parser, token_type: TokenType) Precedence {
-        return switch (token_type) {
+    fn getTokenPrec(_: *Parser, tokenType: TokenType) Precedence {
+        return switch (tokenType) {
             .DoubleAmpersand => .Logical,
             .DoublePipe => .Logical,
 
@@ -417,7 +417,7 @@ pub const Parser = struct {
         };
     }
 
-    fn current_prec(self: *Parser) u8 {
-        return @intFromEnum(self.get_token_prec(self.current_token().type));
+    fn currentPrec(self: *Parser) u8 {
+        return @intFromEnum(self.getTokenPrec(self.currentToken().type));
     }
 };

@@ -59,7 +59,7 @@ fn prettyPrintRecCheck(
             std.debug.print("IntLiteral {d} (type {d})\n", .{ val, expr.typeId });
         },
         .Identifier => |name| {
-            std.debug.print("Identifier {s}\n", .{name});
+            std.debug.print("Identifier {s} (type {d})\n", .{ name, expr.typeId });
         },
         .BoolLiteral => |val| {
             std.debug.print("BoolLiteral {s} (type {d})\n", .{ if (val) "true" else "false", expr.typeId });

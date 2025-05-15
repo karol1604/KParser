@@ -223,4 +223,6 @@ test "read from file" {
         utils.prettyPrintCheckedExpression(item.*.expr.*);
         std.debug.print("---------\n", .{});
     }
+
+    std.debug.print("{any}\n", .{check.scopes.items[0].variables.get("a")});
 }

@@ -147,12 +147,22 @@ pub const Parser = struct {
         return try self.makeStatementPointer(stmt);
     }
 
+    fn parseVariableIdentifier(self: *Parser) !*Expression {
+        const start_span = self.currentToken().span;
+        const ident = try self.expectIdent();
+        return self.makeExpressionPointer(.{
+            .kind = .{ .Identifier = ident },
+            .span = Span.sum(start_span, self.currentToken().span),
+        });
+    }
+
     fn parseExpression(self: *Parser, prec: Precedence) anyerror!*Expression {
         var expr = switch (self.currentToken().type) {
             .IntLiteral => try self.parseIntLiteral(),
             .LParen => try self.parseGroupExpression(),
             .True, .False => try self.parseBoolLiteral(),
             .Plus, .Minus, .Bang => try self.parseUnaryExpression(),
+            .Identifier => try self.parseVariableIdentifier(),
             else => {
                 std.debug.print("Error: No prefix parse function for token type `{s}` at {any}\n", .{
                     self.currentToken().type, self.currentToken().span,
@@ -161,32 +171,6 @@ pub const Parser = struct {
             },
         };
 
-        // while (self.currentPrec() > @intFromEnum(prec)) {
-        //     // we probably can abstrct this away into a single function call
-        //     switch (self.currentToken().type) {
-        //         .IntLiteral => return error.ConsecutiveInts, // TODO: this condition is actually never reached, fix this bug! (potentially replace > with >= but idk)
-        //         .Plus => expr = try self.parseBinaryExpression(expr, .Plus, .Sum),
-        //         .Minus => expr = try self.parseBinaryExpression(expr, .Minus, .Sum),
-        //
-        //         .Star => expr = try self.parseBinaryExpression(expr, .Multiply, .Product),
-        //         .Slash => expr = try self.parseBinaryExpression(expr, .Divide, .Product),
-        //
-        //         .DoubleEqual => expr = try self.parseBinaryExpression(expr, .Equal, .Equality),
-        //         .NotEqual => expr = try self.parseBinaryExpression(expr, .NotEqual, .Equality),
-        //
-        //         .LessThan => expr = try self.parseBinaryExpression(expr, .LessThan, .Comparison),
-        //         .GreaterThan => expr = try self.parseBinaryExpression(expr, .GreaterThan, .Comparison),
-        //         .LessThanOrEqual => expr = try self.parseBinaryExpression(expr, .LessThanOrEqual, .Comparison),
-        //         .GreaterThanOrEqual => expr = try self.parseBinaryExpression(expr, .GreaterThanOrEqual, .Comparison),
-        //
-        //         .DoubleAmpersand => expr = try self.parseBinaryExpression(expr, .LogicalAnd, .Logical),
-        //         .DoublePipe => expr = try self.parseBinaryExpression(expr, .LogicalOr, .Logical),
-        //
-        //         .Caret => expr = try self.parseBinaryExpression(expr, .Exponent, .Exponent),
-        //         .Eof => return expr,
-        //         else => return error.InvalidOperator,
-        //     }
-        // }
         while (self.currentToken().type != .Semicolon and self.currentToken().type != .Eof and @intFromEnum(prec) < self.currentPrec()) {
             const operatorType = self.currentToken().type;
             const semanticOp: ?BinaryOperator = getBinaryOperator(operatorType);

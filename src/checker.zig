@@ -42,29 +42,118 @@ const CheckedExpressionData = union(enum) {
     },
 };
 
+const Scope = struct {
+    variables: std.StringHashMap(TypeId),
+    types: std.StringHashMap(TypeId),
+
+    pub fn init(alloc: std.mem.Allocator) !Scope {
+        return Scope{
+            .variables = std.StringHashMap(TypeId).init(alloc),
+            .types = std.StringHashMap(TypeId).init(alloc),
+        };
+    }
+
+    pub fn deinit(self: *Scope) void {
+        self.variables.deinit();
+        self.types.deinit();
+    }
+};
+
 pub const Checker = struct {
     alloc: std.mem.Allocator,
     statements: []*ast.Statement,
     types: std.ArrayList([]const u8),
+    scopes: std.ArrayList(Scope),
 
     pub fn init(alloc: std.mem.Allocator, stmts: []*ast.Statement) !Checker {
+        var scopes = std.ArrayList(Scope).init(alloc);
+        errdefer {
+            for (scopes.items) |*scope| scope.deinit();
+            scopes.deinit();
+        }
+
+        try scopes.append(try Scope.init(alloc));
+
         var types = std.ArrayList([]const u8).init(alloc);
         errdefer types.deinit();
+
         try types.append("Empty");
         try types.append("Int");
         try types.append("Bool");
 
-        return Checker{
+        var c = Checker{
             .alloc = alloc,
             .statements = stmts,
             .types = types,
+            .scopes = scopes,
         };
+
+        try c.declareType("Empty", EMPTY_TYPE_ID);
+        try c.declareType("Int", INT_TYPE_ID);
+        try c.declareType("Bool", BOOL_TYPE_ID);
+
+        return c;
     }
 
     fn makePointer(self: *const Checker, comptime T: type, val: T) !*T {
         const ptr = try self.alloc.create(T);
         ptr.* = val;
         return ptr;
+    }
+
+    fn currentScope(self: *Checker) *Scope {
+        return &self.scopes.items[self.scopes.items.len - 1];
+    }
+
+    fn pushScope(self: *Checker) !void {
+        const newScope = try Scope.init(self.alloc);
+        try self.scopes.append(newScope);
+    }
+
+    fn popScope(self: *Checker) void {
+        const last = self.scopes.items.len - 1;
+        self.scopes.items[last].deinit();
+        _ = self.scopes.pop();
+    }
+
+    fn declareType(self: *Checker, name: []const u8, id: TypeId) !void {
+        const scope = self.currentScope();
+        if (scope.types.get(name) != null) {
+            std.debug.print("Type `{s}` already declared\n", .{name});
+            return error.TypeAlreadyDeclared;
+        }
+        try scope.types.put(name, id);
+    }
+
+    fn lookupType(self: *Checker, name_: ?[]const u8) ?TypeId {
+        if (name_) |name| {
+            for (self.scopes.items) |*scope| {
+                if (scope.types.get(name) != null) {
+                    return scope.types.get(name);
+                }
+            }
+        }
+        return null;
+    }
+
+    // fn lookupType(self: *Checker, name_: ?[]const u8) ?TypeId {
+    //     if (name_) |name| {
+    //         for (self.types.items, 0..) |typeName, index| {
+    //             if (std.mem.eql(u8, typeName, name)) {
+    //                 return @as(TypeId, index);
+    //             }
+    //         }
+    //     }
+    //     return null;
+    // }
+
+    fn declareVar(self: *Checker, name: []const u8, type_id: TypeId) !void {
+        const scope = self.currentScope();
+        if (scope.variables.get(name) != null) {
+            std.debug.print("Variable `{s}` already declared\n", .{name});
+            return error.VariableAlreadyDeclared;
+        }
+        try scope.variables.put(name, type_id);
     }
 
     pub fn check(self: *Checker) !std.ArrayList(*CheckedStatement) {
@@ -93,11 +182,12 @@ pub const Checker = struct {
                 if (expectedType == null) {
                     if (varDecl.type) |typeName| {
                         std.debug.print("Unknown type `{s}` at {any}\n", .{ typeName, stmt.*.span });
+                        return error.UnknownType;
                     }
-                    return error.UnknownType;
                 }
 
                 const value = try self.checkExpression(varDecl.value, expectedType);
+                try self.declareVar(varDecl.name, value.typeId);
                 expr = try self.typedExpression(.{
                     .VariableDeclaration = .{
                         .name = varDecl.name,
@@ -113,17 +203,6 @@ pub const Checker = struct {
         });
     }
 
-    fn lookupType(self: *Checker, name_: ?[]const u8) ?TypeId {
-        if (name_) |name| {
-            for (self.types.items, 0..) |typeName, index| {
-                if (std.mem.eql(u8, typeName, name)) {
-                    return @as(TypeId, index);
-                }
-            }
-        }
-        return null;
-    }
-
     fn checkExpression(self: *Checker, expr: *const ast.Expression, typeHint: ?TypeId) !*CheckedExpression {
         switch (expr.*.kind) {
             .IntLiteral => |int| {
@@ -132,7 +211,16 @@ pub const Checker = struct {
             .BoolLiteral => |b| {
                 return try self.typedExpression(.{ .BoolLiteral = b }, expr.*.span, BOOL_TYPE_ID, typeHint);
             },
-
+            .Identifier => |id| {
+                const scope = self.currentScope();
+                const typeId = scope.variables.get(id);
+                if (typeId) |ty| {
+                    return try self.typedExpression(.{ .Identifier = id }, expr.*.span, ty, typeHint);
+                } else {
+                    std.debug.print("Unknown variable `{s}` at {any}\n", .{ id, expr.*.span });
+                    return error.UnknownVariable;
+                }
+            },
             .Unary => |unary| {
                 switch (unary.operator) {
                     .Not => {
@@ -227,10 +315,10 @@ pub const Checker = struct {
                     // },
                 }
             },
-            else => {
-                std.debug.print("Unknown expression type \n", .{});
-                return error.UnknownExpressionType;
-            },
+            // else => {
+            //     std.debug.print("Unknown expression type \n", .{});
+            //     return error.UnknownExpressionType;
+            // },
         }
     }
 

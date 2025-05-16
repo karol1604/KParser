@@ -116,7 +116,10 @@ fn prettyPrintRecCheck(
 
             std.debug.print(")", .{});
             std.debug.print(" -> {d}\n", .{decl.returnType});
-            std.debug.print("   {d} statements\n", .{decl.body.items.len});
+            // std.debug.print("   {d} statements\n", .{decl.body.items.len});
+            for (decl.body.items, 0..) |stmt, i| {
+                prettyPrintRecCheck(stmt.*.expr.*, depth + 1, treeLines, i == decl.body.items.len - 1);
+            }
         },
         // else => {},
     }

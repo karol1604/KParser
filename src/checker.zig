@@ -112,6 +112,19 @@ pub const Checker = struct {
         return ptr;
     }
 
+    fn typeNameFromId(self: *Checker, id: TypeId) ?[]const u8 {
+        for (self.scopes.items) |*scope| {
+            var it = scope.types.iterator();
+            while (it.next()) |entry| {
+                if (entry.value_ptr.* == id) {
+                    return entry.key_ptr.*;
+                }
+            }
+        }
+
+        return null;
+    }
+
     fn currentScope(self: *Checker) *Scope {
         return &self.scopes.items[self.scopes.items.len - 1];
     }
@@ -257,6 +270,12 @@ pub const Checker = struct {
                     try body.append(checkedStmt);
                 }
 
+                const lastStmtTypeId = body.items[body.items.len - 1].*.expr.*.typeId;
+                if (returnType != lastStmtTypeId) {
+                    std.debug.print("Type mismatch: Function return type marked as `` but  Expected {s}, got {s} at {any}\n", .{ self.typeNameFromId(returnType).?, self.typeNameFromId(lastStmtTypeId).?, expr.*.span });
+                    return error.FunctionReturnTypeMismatch;
+                }
+
                 self.popScope();
 
                 return self.typedExpression(
@@ -374,7 +393,7 @@ pub const Checker = struct {
     fn typedExpression(self: *Checker, res: CheckedExpressionData, span: Span, resType: TypeId, typeHint: ?TypeId) !*CheckedExpression {
         if (typeHint) |hint| {
             if (resType != hint) {
-                std.debug.print("Type mismatch: expected type {d}, got {d} at {s}\n", .{ hint, resType, span });
+                std.debug.print("Type mismatch: expected type {s}, got {s} at {s}\n", .{ self.typeNameFromId(hint).?, self.typeNameFromId(resType).?, span });
                 return error.TypeMismatch;
             } else {
                 return self.makePointer(CheckedExpression, CheckedExpression{

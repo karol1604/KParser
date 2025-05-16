@@ -158,7 +158,7 @@ pub const Parser = struct {
         const ident = try self.expectIdent();
         return self.makeExpressionPointer(.{
             .kind = .{ .Identifier = ident },
-            .span = Span.join(start_span, self.currentToken().span),
+            .span = Span.join(start_span, start_span),
         });
     }
 

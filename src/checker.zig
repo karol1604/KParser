@@ -51,6 +51,8 @@ const CheckedExpressionData = union(enum) {
         returnType: TypeId,
         body: std.ArrayList(*CheckedStatement),
     },
+
+    Block: std.ArrayList(*CheckedStatement),
 };
 
 const Scope = struct {
@@ -75,8 +77,9 @@ pub const Checker = struct {
     statements: []*ast.Statement,
     types: std.ArrayList([]const u8),
     scopes: std.ArrayList(Scope),
+    source: []const u8,
 
-    pub fn init(alloc: std.mem.Allocator, stmts: []*ast.Statement) !Checker {
+    pub fn init(alloc: std.mem.Allocator, stmts: []*ast.Statement, source: []const u8) !Checker {
         var scopes = std.ArrayList(Scope).init(alloc);
         errdefer {
             for (scopes.items) |*scope| scope.deinit();
@@ -97,6 +100,7 @@ pub const Checker = struct {
             .statements = stmts,
             .types = types,
             .scopes = scopes,
+            .source = source,
         };
 
         try c.declareType("Empty", EMPTY_TYPE_ID);
@@ -389,10 +393,34 @@ pub const Checker = struct {
                     // },
                 }
             },
-            else => {
-                std.debug.print("Unknown expression type \n", .{});
-                return error.UnknownExpressionType;
+            .Block => |block| {
+                try self.pushScope();
+                var body = std.ArrayList(*CheckedStatement).init(self.alloc);
+                errdefer body.deinit();
+
+                for (block.body.items) |stmt| {
+                    const checkedStmt = try self.checkStatement(stmt);
+                    try body.append(checkedStmt);
+                }
+
+                if (body.items.len == 0) {
+                    std.debug.print("Block is empty at {any}\n", .{expr.*.span});
+                    return error.BlockEmpty;
+                }
+
+                self.popScope();
+
+                return try self.typedExpression(
+                    .{ .Block = body },
+                    expr.*.span,
+                    EMPTY_TYPE_ID,
+                    typeHint,
+                );
             },
+            // else => {
+            //     std.debug.print("Unknown expression type \n", .{});
+            //     return error.UnknownExpressionType;
+            // },
         }
     }
 

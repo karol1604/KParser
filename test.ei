@@ -1,4 +1,12 @@
-let add10 := fn(n: Int): Bool -> {
-    let foo := n < 10;
-    foo + 1;
+let a := 1;
+let abba := true;
+
+let add := fn(x: Int, y: Int): Bool -> {
+    x < y;
+};
+
+let t := {
+    let c := 1;
+	a;
+	c + 10;
 };

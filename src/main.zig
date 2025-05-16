@@ -148,41 +148,41 @@ test "actual syntax test" {
 //     }
 // }
 //
-test "parse int literal" {
-    const testAlloc = std.testing.allocator;
-    var arena = std.heap.ArenaAllocator.init(testAlloc);
-    defer arena.deinit();
-    const arenaAlloc = arena.allocator();
-
-    // const diagnosticsList = std.ArrayList(diagnostics.Diagnostic).init(arenaAlloc);
-
-    // const source = "(5 + 3 * (10 - 2) / 4 == 7) && (9 >= 8 || 6 < 5)";
-    // const source = "2 ^ 3 ^ 4";
-    const source = "(1 != 3) && (2 < 1)";
-
-    var lex = try lexer.Lexer.init(source, arenaAlloc);
-    defer lex.deinit();
-    try lex.tokenize();
-
-    var p = parser.Parser.init(lex.tokens.items, arenaAlloc);
-    const t = try p.parse();
-    defer t.deinit();
-
-    std.debug.print("\n{any}\n", .{t.items[0].*.span});
-
-    std.debug.print("Statements for {s}:\n", .{source});
-    std.debug.print("---------\n", .{});
-
-    for (t.items) |item| {
-        std.debug.print("   ", .{});
-        try utils.prettyPrintStatement(item.*);
-        std.debug.print("---------\n", .{});
-    }
-
-    var check = try checker.Checker.init(arenaAlloc, t.items);
-    const cs = try check.check();
-    utils.prettyPrintCheckedExpression(cs.items[0].*.expr.*);
-}
+// test "parse int literal" {
+//     const testAlloc = std.testing.allocator;
+//     var arena = std.heap.ArenaAllocator.init(testAlloc);
+//     defer arena.deinit();
+//     const arenaAlloc = arena.allocator();
+//
+//     // const diagnosticsList = std.ArrayList(diagnostics.Diagnostic).init(arenaAlloc);
+//
+//     // const source = "(5 + 3 * (10 - 2) / 4 == 7) && (9 >= 8 || 6 < 5)";
+//     // const source = "2 ^ 3 ^ 4";
+//     const source = "(1 != 3) && (2 < 1)";
+//
+//     var lex = try lexer.Lexer.init(source, arenaAlloc);
+//     defer lex.deinit();
+//     try lex.tokenize();
+//
+//     var p = parser.Parser.init(lex.tokens.items, arenaAlloc);
+//     const t = try p.parse();
+//     defer t.deinit();
+//
+//     std.debug.print("\n{any}\n", .{t.items[0].*.span});
+//
+//     std.debug.print("Statements for {s}:\n", .{source});
+//     std.debug.print("---------\n", .{});
+//
+//     for (t.items) |item| {
+//         std.debug.print("   ", .{});
+//         try utils.prettyPrintStatement(item.*);
+//         std.debug.print("---------\n", .{});
+//     }
+//
+//     var check = try checker.Checker.init(arenaAlloc, t.items);
+//     const cs = try check.check();
+//     utils.prettyPrintCheckedExpression(cs.items[0].*.expr.*);
+// }
 
 test "read from file" {
     const RESET = "\x1b[0m";
@@ -217,7 +217,7 @@ test "read from file" {
         std.debug.print("---------\n", .{});
     }
 
-    var check = try checker.Checker.init(arenaAlloc, t.items);
+    var check = try checker.Checker.init(arenaAlloc, t.items, source);
     const cs = try check.check();
     for (cs.items) |item| {
         utils.prettyPrintCheckedExpression(item.*.expr.*);

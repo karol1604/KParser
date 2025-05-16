@@ -121,6 +121,12 @@ fn prettyPrintRecCheck(
                 prettyPrintRecCheck(stmt.*.expr.*, depth + 1, treeLines, i == decl.body.items.len - 1);
             }
         },
+        .Block => |block| {
+            std.debug.print("Block ({d} statements)\n", .{block.items.len});
+            for (block.items, 0..) |stmt, i| {
+                prettyPrintRecCheck(stmt.*.expr.*, depth + 1, treeLines, i == block.items.len - 1);
+            }
+        },
         // else => {},
     }
 }

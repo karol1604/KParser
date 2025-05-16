@@ -22,21 +22,14 @@ I'm also not sure about the `Checker` implementation. I've never written one bef
 
 ## Syntax (WIP)
 This is the syntax I'd like this language to have. This is subject to change
-```
+```eigen
 -- vars
 let x := 12;
 let y: Int = 13;
 
 -- functions
-let f : Int -> (Int, Int) = n |-> {
+let f := fn(n: Int): Int -> {
     let foo := n + 1;
-    (foo, 2*n);
+    foo;
 };
-
-let f : Int -> Int = n |-> {
-    let foo := n + 1;
-    ret foo;
-};
-
-let f := fn (a: Int, b: Int): Int {};
 ```

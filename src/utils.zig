@@ -232,5 +232,23 @@ fn prettyPrintRec(
             // right is last
             prettyPrintRec(b.right.*.kind, depth + 1, treeLines, true);
         },
+        .Block => |block| {
+            for (block.body.items) |stmt| {
+                switch (stmt.*.kind) {
+                    .ExpressionStatement => |expr_| {
+                        // std.debug.print("   ExpressionStatement\n", .{});
+                        // prettyPrintRec(expr_.*.kind, depth + 1, treeLines, true);
+                        prettyPrintExpression(expr_.*);
+                    },
+                    .VariableDeclaration => |varDecl| {
+                        // std.debug.print("   VariableDecl {s}\n", .{varDecl.name});
+                        // prettyPrintRec(varDecl.value.*.kind, depth + 1, treeLines, true);
+                        prettyPrintExpression(varDecl.value.*);
+                    },
+                    else => {},
+                }
+            }
+        },
+        // else => {},
     }
 }

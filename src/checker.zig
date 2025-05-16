@@ -246,7 +246,8 @@ pub const Checker = struct {
             },
 
             .FunctionDeclaration => |decl| {
-                const returnType = self.lookupType(decl.returnType).?;
+                // TODO: remove this unwrap
+                const returnType = self.lookupType(decl.returnType);
                 var params = std.ArrayList(*CheckedFunctionParameter).init(self.alloc);
                 var body = std.ArrayList(*CheckedStatement).init(self.alloc);
 
@@ -270,18 +271,23 @@ pub const Checker = struct {
                     try body.append(checkedStmt);
                 }
 
+                if (body.items.len == 0) {
+                    std.debug.print("Function body is empty at {any}\n", .{expr.*.span});
+                    return error.FunctionBodyEmpty;
+                }
                 const lastStmtTypeId = body.items[body.items.len - 1].*.expr.*.typeId;
-                if (returnType != lastStmtTypeId) {
-                    std.debug.print("Type mismatch: Function return type marked as `{s}` but returns `{s}` at {any}\n", .{ self.typeNameFromId(returnType).?, self.typeNameFromId(lastStmtTypeId).?, expr.*.span });
+                if (returnType != null and returnType != lastStmtTypeId) {
+                    std.debug.print("Type mismatch: Function return type marked as `{s}` but returns `{s}` at {any}\n", .{ self.typeNameFromId(returnType.?).?, self.typeNameFromId(lastStmtTypeId).?, expr.*.span });
                     return error.FunctionReturnTypeMismatch;
                 }
 
                 self.popScope();
 
+                // NOTE: Hack here
                 return self.typedExpression(
                     .{ .FunctionDeclaration = .{
                         .parameters = params,
-                        .returnType = returnType,
+                        .returnType = if (returnType) |t| t else lastStmtTypeId,
                         .body = body,
                     } },
                     expr.*.span,
@@ -383,10 +389,10 @@ pub const Checker = struct {
                     // },
                 }
             },
-            // else => {
-            //     std.debug.print("Unknown expression type \n", .{});
-            //     return error.UnknownExpressionType;
-            // },
+            else => {
+                std.debug.print("Unknown expression type \n", .{});
+                return error.UnknownExpressionType;
+            },
         }
     }
 

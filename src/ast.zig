@@ -58,6 +58,10 @@ pub const ExpressionKind = union(enum) {
         returnType: ?[]const u8,
         body: std.ArrayList(*Statement),
     },
+
+    Block: struct {
+        body: std.ArrayList(*Statement),
+    },
 };
 
 pub const UnaryOperator = union(enum) {

@@ -193,26 +193,70 @@ pub const Parser = struct {
         }
 
         try self.expectToken(.RightArrow);
-        try self.expectToken(.LBrace);
+        // try self.expectToken(.LBrace);
 
-        var body = std.ArrayList(*Statement).init(self.alloc);
+        // var body = std.ArrayList(*Statement).init(self.alloc);
+        //
+        // while (self.currentToken().type != .RBrace) {
+        //     const stmt = try self.parseStatement();
+        //     // std.debug.print(">>>>>>>>>>>>>>>> STATEMENT `{any}` \n\n", .{stmt.*.kind.ExpressionStatement.*.span});
+        //     try body.append(stmt);
+        // }
+        //
+        // const endSpan = self.currentToken().span;
+        //
+        // try self.expectToken(.RBrace);
 
-        while (self.currentToken().type != .RBrace) {
-            const stmt = try self.parseStatement();
-            // std.debug.print(">>>>>>>>>>>>>>>> STATEMENT `{any}` \n\n", .{stmt.*.kind.ExpressionStatement.*.span});
-            try body.append(stmt);
+        if (self.currentToken().type != .LBrace) {
+            // NOTE: dont know about this one
+            const bodyExpr = try self.parseExpression(.Lowest);
+            const endSpan = bodyExpr.*.span;
+
+            var b = std.ArrayList(*Statement).init(self.alloc);
+            try b.append(try self.makeStatementPointer(Statement{
+                .kind = .{ .ExpressionStatement = bodyExpr },
+                .span = bodyExpr.*.span,
+            }));
+
+            return self.makePointer(Expression, .{
+                .kind = .{ .FunctionDeclaration = .{
+                    .parameters = params,
+                    .returnType = returnType,
+                    .body = b,
+                } },
+                .span = Span.join(startSpan, endSpan),
+            });
         }
 
-        const endSpan = self.currentToken().span;
-
-        try self.expectToken(.RBrace);
+        const block = try self.parseBlockExpression();
+        const endSpan = block.*.span;
 
         return self.makePointer(Expression, .{
             .kind = .{ .FunctionDeclaration = .{
                 .parameters = params,
                 .returnType = returnType,
-                .body = body,
+                .body = block.*.kind.Block.body,
             } },
+            .span = Span.join(startSpan, endSpan),
+        });
+    }
+
+    fn parseBlockExpression(self: *Parser) !*Expression {
+        const startSpan = self.currentToken().span;
+        try self.expectToken(.LBrace); // consume '{'
+
+        var statements = std.ArrayList(*Statement).init(self.alloc);
+        while (self.currentToken().type != .RBrace) {
+            const stmt = try self.parseStatement();
+            try statements.append(stmt);
+        }
+
+        const endSpan = self.currentToken().span;
+
+        try self.expectToken(.RBrace); // consume '}'
+
+        return self.makePointer(Expression, .{
+            .kind = .{ .Block = .{ .body = statements } },
             .span = Span.join(startSpan, endSpan),
         });
     }
@@ -225,6 +269,8 @@ pub const Parser = struct {
             .Plus, .Minus, .Bang => try self.parseUnaryExpression(),
             .Identifier => try self.parseVariableIdentifier(),
             .KeywordFn => try self.parseFunctionDeclaration(),
+            // NOTE: Not sure if this is the right place for this
+            .LBrace => try self.parseBlockExpression(),
             else => {
                 std.debug.print("Error: No prefix parse function for token type `{s}` at {any}\n", .{
                     self.currentToken().type, self.currentToken().span,

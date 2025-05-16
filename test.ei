@@ -1,6 +1,6 @@
 let d := 1;
 
-let eq := fn(a: Int, b: Int, mem: Bool): Int -> {
+let eq := fn(a: Int, b: Int, mem: Bool): Bool -> {
     let c := 1 + d;
     a + c < d;
 };

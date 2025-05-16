@@ -272,7 +272,7 @@ pub const Checker = struct {
 
                 const lastStmtTypeId = body.items[body.items.len - 1].*.expr.*.typeId;
                 if (returnType != lastStmtTypeId) {
-                    std.debug.print("Type mismatch: Function return type marked as `` but  Expected {s}, got {s} at {any}\n", .{ self.typeNameFromId(returnType).?, self.typeNameFromId(lastStmtTypeId).?, expr.*.span });
+                    std.debug.print("Type mismatch: Function return type marked as `{s}` but returns `{s}` at {any}\n", .{ self.typeNameFromId(returnType).?, self.typeNameFromId(lastStmtTypeId).?, expr.*.span });
                     return error.FunctionReturnTypeMismatch;
                 }
 

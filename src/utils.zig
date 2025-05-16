@@ -165,6 +165,21 @@ fn prettyPrintRec(
         .BoolLiteral => |val| {
             std.debug.print("BoolLiteral {s}\n", .{if (val) "true" else "false"});
         },
+        .FunctionDeclaration => |decl| {
+            std.debug.print("Function (", .{});
+            for (decl.parameters.items, 0..) |param, i| {
+                std.debug.print("{s}:{s}", .{ param.name, param.type });
+                if (i != decl.parameters.items.len - 1) std.debug.print(", ", .{});
+            }
+
+            std.debug.print(")", .{});
+            if (decl.returnType) |ty| {
+                std.debug.print(" -> {s}\n", .{ty});
+            } else {
+                std.debug.print("\n", .{});
+            }
+            std.debug.print("   {d} statements\n", .{decl.body.items.len});
+        },
         .Unary => |u| {
             const opStr = switch (u.operator) {
                 .Plus => "+",

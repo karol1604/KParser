@@ -10,7 +10,7 @@ pub const Span = struct {
     start: Location,
     end: Location,
 
-    pub fn sum(left: Span, right: Span) Span {
+    pub fn join(left: Span, right: Span) Span {
         return Span{
             .start = left.start,
             .end = right.end,

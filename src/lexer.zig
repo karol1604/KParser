@@ -120,7 +120,10 @@ pub const Lexer = struct {
             ':' => try self.addToken(.Colon, .{ .start = tokStartLoc, .end = self.currentLocation() }),
 
             '+' => try self.addToken(.Plus, .{ .start = tokStartLoc, .end = self.currentLocation() }),
-            '-' => try self.addToken(.Minus, .{ .start = tokStartLoc, .end = self.currentLocation() }),
+            '-' => {
+                const matches = self.match('>');
+                try self.addToken(if (matches) .RightArrow else .Minus, .{ .start = tokStartLoc, .end = self.currentLocation() });
+            },
             '*' => try self.addToken(.Star, .{ .start = tokStartLoc, .end = self.currentLocation() }),
             '/' => try self.addToken(.Slash, .{ .start = tokStartLoc, .end = self.currentLocation() }),
             '^' => try self.addToken(.Caret, .{ .start = tokStartLoc, .end = self.currentLocation() }),

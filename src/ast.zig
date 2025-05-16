@@ -25,6 +25,11 @@ pub const StatementKind = union(enum) {
     // etc
 };
 
+pub const FunctionParameter = struct {
+    name: []const u8,
+    type: []const u8,
+};
+
 pub const Expression = struct {
     kind: ExpressionKind,
     span: Span,
@@ -46,6 +51,12 @@ pub const ExpressionKind = union(enum) {
         left: *const Expression,
         operator: BinaryOperator,
         right: *const Expression,
+    },
+
+    FunctionDeclaration: struct {
+        parameters: std.ArrayList(*FunctionParameter),
+        returnType: ?[]const u8,
+        body: std.ArrayList(*Statement),
     },
 };
 

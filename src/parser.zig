@@ -18,6 +18,7 @@ const Expression = ast.Expression;
 const BinaryOperator = ast.BinaryOperator;
 const UnaryOperator = ast.UnaryOperator;
 const Statement = ast.Statement;
+const FunctionParameter = ast.FunctionParameter;
 
 pub const Parser = struct {
     tokens: []const Token,
@@ -34,6 +35,12 @@ pub const Parser = struct {
 
     pub fn deinit(self: *Parser) void {
         _ = self;
+    }
+
+    fn makePointer(self: *const Parser, comptime T: type, value: T) !*T {
+        const ptr = try self.alloc.create(T);
+        ptr.* = value;
+        return ptr;
     }
 
     fn makeExpressionPointer(self: *const Parser, expr: Expression) !*Expression {
@@ -114,7 +121,7 @@ pub const Parser = struct {
                 .value = val,
                 .type = ty,
             } },
-            .span = Span.sum(startSpan, endSpan),
+            .span = Span.join(startSpan, endSpan),
         });
     }
 
@@ -142,7 +149,7 @@ pub const Parser = struct {
 
         const stmt = Statement{
             .kind = .{ .ExpressionStatement = expr },
-            .span = Span.sum(startSpan, endSpan),
+            .span = Span.join(startSpan, endSpan),
         };
         return try self.makeStatementPointer(stmt);
     }
@@ -152,7 +159,62 @@ pub const Parser = struct {
         const ident = try self.expectIdent();
         return self.makeExpressionPointer(.{
             .kind = .{ .Identifier = ident },
-            .span = Span.sum(start_span, self.currentToken().span),
+            .span = Span.join(start_span, self.currentToken().span),
+        });
+    }
+
+    fn parseFunctionParameter(self: *Parser) !*FunctionParameter {
+        const name = try self.expectIdent();
+        try self.expectToken(.Colon);
+        const ty = try self.expectIdent();
+
+        return self.makePointer(FunctionParameter, .{
+            .name = name,
+            .type = ty,
+        });
+    }
+
+    fn parseFunctionDeclaration(self: *Parser) !*Expression {
+        const startSpan = self.currentToken().span;
+        self.advance(); // consume fn
+        try self.expectToken(.LParen);
+
+        var params = std.ArrayList(*FunctionParameter).init(self.alloc);
+        while (self.peek().type != .RParen) {
+            try params.append(try self.parseFunctionParameter());
+            if (self.currentToken().type == .Comma) try self.expectToken(.Comma) else break;
+        }
+
+        try self.expectToken(.RParen);
+
+        var returnType: ?[]const u8 = null;
+        if (self.currentToken().type == .Colon) {
+            try self.expectToken(.Colon);
+            returnType = try self.expectIdent();
+        }
+
+        try self.expectToken(.RightArrow);
+        try self.expectToken(.LBrace);
+
+        var body = std.ArrayList(*Statement).init(self.alloc);
+
+        while (self.currentToken().type != .RBrace) {
+            const stmt = try self.parseStatement();
+            std.debug.print(">>>>>>>>>>>>>>>> STATEMENT `{any}` \n\n", .{stmt.*.kind.ExpressionStatement.*.span});
+            try body.append(stmt);
+        }
+
+        const endSpan = self.currentToken().span;
+
+        try self.expectToken(.RBrace);
+
+        return self.makePointer(Expression, .{
+            .kind = .{ .FunctionDeclaration = .{
+                .parameters = params,
+                .returnType = returnType,
+                .body = body,
+            } },
+            .span = Span.join(startSpan, endSpan),
         });
     }
 
@@ -163,6 +225,7 @@ pub const Parser = struct {
             .True, .False => try self.parseBoolLiteral(),
             .Plus, .Minus, .Bang => try self.parseUnaryExpression(),
             .Identifier => try self.parseVariableIdentifier(),
+            .KeywordFn => try self.parseFunctionDeclaration(),
             else => {
                 std.debug.print("Error: No prefix parse function for token type `{s}` at {any}\n", .{
                     self.currentToken().type, self.currentToken().span,
@@ -232,7 +295,7 @@ pub const Parser = struct {
 
         return self.makeExpressionPointer(.{
             .kind = .{ .Unary = .{ .operator = op, .right = rhs } },
-            .span = Span.sum(opToken.span, rhs.span),
+            .span = Span.join(opToken.span, rhs.span),
         });
     }
 
@@ -269,7 +332,7 @@ pub const Parser = struct {
         const rightPrecAdjust = if (op == .Exponent) @intFromEnum(prec) - 1 else @intFromEnum(prec);
         const rhs = try self.parseExpression(@as(Precedence, @enumFromInt(rightPrecAdjust)));
 
-        const exprSpan = Span.sum(lhs.span, rhs.span);
+        const exprSpan = Span.join(lhs.span, rhs.span);
         return self.makeExpressionPointer(.{
             .kind = .{ .Binary = .{
                 .left = lhs,

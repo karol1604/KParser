@@ -17,7 +17,7 @@ I'm also not sure about the `Checker` implementation. I've never written one bef
 ## Todo
 - [x] Pipe `Span` into `Expression` and `Statement`. For now, we literally ignore any position info LOL
 - [ ] Make some kind of `Diagnostic` struct or wtv for error handling bc now it's basically inexistent
-- [ ] Add a notion of `Scope` or smth in the checker
+- [x] Add a notion of `Scope` or smth in the checker
 - [ ] Think about types and how should they work
 
 ## Syntax (WIP)
@@ -29,12 +29,14 @@ let y: Int = 13;
 
 -- functions
 let f : Int -> (Int, Int) = n |-> {
-    let foo := num + 1;
+    let foo := n + 1;
     (foo, 2*n);
 };
 
-let f := n -> {
-    let foo := num + 1;
-    (foo, 2*n);
+let f : Int -> Int = n |-> {
+    let foo := n + 1;
+    ret foo;
 };
+
+let f := fn (a: Int, b: Int): Int {};
 ```

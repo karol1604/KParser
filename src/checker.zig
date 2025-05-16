@@ -136,17 +136,6 @@ pub const Checker = struct {
         return null;
     }
 
-    // fn lookupType(self: *Checker, name_: ?[]const u8) ?TypeId {
-    //     if (name_) |name| {
-    //         for (self.types.items, 0..) |typeName, index| {
-    //             if (std.mem.eql(u8, typeName, name)) {
-    //                 return @as(TypeId, index);
-    //             }
-    //         }
-    //     }
-    //     return null;
-    // }
-
     fn declareVar(self: *Checker, name: []const u8, type_id: TypeId) !void {
         const scope = self.currentScope();
         if (scope.variables.get(name) != null) {
@@ -315,10 +304,10 @@ pub const Checker = struct {
                     // },
                 }
             },
-            // else => {
-            //     std.debug.print("Unknown expression type \n", .{});
-            //     return error.UnknownExpressionType;
-            // },
+            else => {
+                std.debug.print("Unknown expression type \n", .{});
+                return error.UnknownExpressionType;
+            },
         }
     }
 

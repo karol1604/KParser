@@ -193,7 +193,7 @@ test "read from file" {
     defer arena.deinit();
     const arenaAlloc = arena.allocator();
 
-    const source = try utils.readFile(arenaAlloc, "test.k");
+    const source = try utils.readFile(arenaAlloc, "test.ei");
     defer arenaAlloc.free(source);
 
     std.debug.print("{s}*********\nSource:\n{s}**********\n{s}", .{ RED, source, RESET });
@@ -224,5 +224,5 @@ test "read from file" {
         std.debug.print("---------\n", .{});
     }
 
-    std.debug.print("{any}\n", .{check.scopes.items[0].variables.get("a")});
+    std.debug.print("{any}\n", .{check.scopes.items[0].variables.get("b")});
 }

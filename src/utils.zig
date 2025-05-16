@@ -107,6 +107,17 @@ fn prettyPrintRecCheck(
             treeLines[depth] = !isLast;
             prettyPrintRecCheck(varDecl.value.*, depth + 1, treeLines, true);
         },
+        .FunctionDeclaration => |decl| {
+            std.debug.print("Function (", .{});
+            for (decl.parameters.items, 0..) |param, i| {
+                std.debug.print("{s}:{d}", .{ param.name, param.typeId });
+                if (i != decl.parameters.items.len - 1) std.debug.print(", ", .{});
+            }
+
+            std.debug.print(")", .{});
+            std.debug.print(" -> {d}\n", .{decl.returnType});
+            std.debug.print("   {d} statements\n", .{decl.body.items.len});
+        },
         // else => {},
     }
 }

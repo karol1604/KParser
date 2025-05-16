@@ -97,7 +97,6 @@ pub const Parser = struct {
                 endSpan = self.currentToken().span;
                 self.advance(); // Consume the semicolon
             },
-            .Eof => {},
             else => {
                 std.debug.print(
                     "Error: Expected semicolon or EOF after let statement value at {any}\n",
@@ -200,7 +199,7 @@ pub const Parser = struct {
 
         while (self.currentToken().type != .RBrace) {
             const stmt = try self.parseStatement();
-            std.debug.print(">>>>>>>>>>>>>>>> STATEMENT `{any}` \n\n", .{stmt.*.kind.ExpressionStatement.*.span});
+            // std.debug.print(">>>>>>>>>>>>>>>> STATEMENT `{any}` \n\n", .{stmt.*.kind.ExpressionStatement.*.span});
             try body.append(stmt);
         }
 

@@ -1,4 +1,5 @@
-let eq := fn(a: Int, b: Int, mem: Bool): Bool -> {
-	a + b;
-	a;
+let c := 1;
+
+let eq := fn(a: Int, b: Int, mem: Bool): Int -> {
+    a + mem;
 };

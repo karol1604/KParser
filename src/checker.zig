@@ -20,6 +20,11 @@ pub const CheckedExpression = struct {
     data: CheckedExpressionData,
 };
 
+const CheckedFunctionParameter = struct {
+    name: []const u8,
+    typeId: TypeId,
+};
+
 const CheckedExpressionData = union(enum) {
     IntLiteral: i64,
     BoolLiteral: bool,
@@ -39,6 +44,12 @@ const CheckedExpressionData = union(enum) {
     VariableDeclaration: struct {
         name: []const u8,
         value: *const CheckedExpression,
+    },
+
+    FunctionDeclaration: struct {
+        parameters: std.ArrayList(*CheckedFunctionParameter),
+        returnType: TypeId,
+        body: std.ArrayList(*CheckedStatement),
     },
 };
 
@@ -145,6 +156,15 @@ pub const Checker = struct {
         try scope.variables.put(name, type_id);
     }
 
+    fn lookupVar(self: *Checker, name: []const u8) ?TypeId {
+        for (self.scopes.items) |*scope| {
+            if (scope.variables.get(name) != null) {
+                return scope.variables.get(name);
+            }
+        }
+        return null;
+    }
+
     pub fn check(self: *Checker) !std.ArrayList(*CheckedStatement) {
         var checkedStatements = std.ArrayList(*CheckedStatement).init(self.alloc);
         errdefer checkedStatements.deinit();
@@ -192,7 +212,7 @@ pub const Checker = struct {
         });
     }
 
-    fn checkExpression(self: *Checker, expr: *const ast.Expression, typeHint: ?TypeId) !*CheckedExpression {
+    fn checkExpression(self: *Checker, expr: *const ast.Expression, typeHint: ?TypeId) anyerror!*CheckedExpression {
         switch (expr.*.kind) {
             .IntLiteral => |int| {
                 return try self.typedExpression(.{ .IntLiteral = int }, expr.*.span, INT_TYPE_ID, typeHint);
@@ -200,15 +220,55 @@ pub const Checker = struct {
             .BoolLiteral => |b| {
                 return try self.typedExpression(.{ .BoolLiteral = b }, expr.*.span, BOOL_TYPE_ID, typeHint);
             },
-            .Identifier => |id| {
-                const scope = self.currentScope();
-                const typeId = scope.variables.get(id);
+            .Identifier => |ident| {
+                // const scope = self.currentScope();
+                // const typeId = scope.variables.get(ident);
+                const typeId = self.lookupVar(ident);
                 if (typeId) |ty| {
-                    return try self.typedExpression(.{ .Identifier = id }, expr.*.span, ty, typeHint);
+                    return try self.typedExpression(.{ .Identifier = ident }, expr.*.span, ty, typeHint);
                 } else {
-                    std.debug.print("Unknown variable `{s}` at {any}\n", .{ id, expr.*.span });
+                    std.debug.print("Unknown variable `{s}` at {any}\n", .{ ident, expr.*.span });
                     return error.UnknownVariable;
                 }
+            },
+
+            .FunctionDeclaration => |decl| {
+                const returnType = self.lookupType(decl.returnType).?;
+                var params = std.ArrayList(*CheckedFunctionParameter).init(self.alloc);
+                var body = std.ArrayList(*CheckedStatement).init(self.alloc);
+
+                try self.pushScope();
+
+                for (decl.parameters.items) |param| {
+                    const paramType = self.lookupType(param.type);
+                    if (paramType == null) {
+                        std.debug.print("Unknown type `{s}` at {any}\n", .{ param.type, expr.*.span });
+                        return error.UnknownType;
+                    }
+                    try params.append(try self.makePointer(CheckedFunctionParameter, .{
+                        .name = param.name,
+                        .typeId = paramType.?,
+                    }));
+                    try self.declareVar(param.name, paramType.?);
+                }
+
+                for (decl.body.items) |stmt| {
+                    const checkedStmt = try self.checkStatement(stmt);
+                    try body.append(checkedStmt);
+                }
+
+                self.popScope();
+
+                return self.typedExpression(
+                    .{ .FunctionDeclaration = .{
+                        .parameters = params,
+                        .returnType = returnType,
+                        .body = body,
+                    } },
+                    expr.*.span,
+                    EMPTY_TYPE_ID,
+                    typeHint,
+                );
             },
             .Unary => |unary| {
                 switch (unary.operator) {
@@ -304,10 +364,10 @@ pub const Checker = struct {
                     // },
                 }
             },
-            else => {
-                std.debug.print("Unknown expression type \n", .{});
-                return error.UnknownExpressionType;
-            },
+            // else => {
+            //     std.debug.print("Unknown expression type \n", .{});
+            //     return error.UnknownExpressionType;
+            // },
         }
     }
 

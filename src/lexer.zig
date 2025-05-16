@@ -121,8 +121,17 @@ pub const Lexer = struct {
 
             '+' => try self.addToken(.Plus, .{ .start = tokStartLoc, .end = self.currentLocation() }),
             '-' => {
-                const matches = self.match('>');
-                try self.addToken(if (matches) .RightArrow else .Minus, .{ .start = tokStartLoc, .end = self.currentLocation() });
+                const matches_arrow = self.match('>');
+                const matches_comment = self.match('-');
+
+                if (matches_comment) {
+                    while (self.peek(0) != '\n' and !self.isAtEnd()) {
+                        _ = self.advance();
+                    }
+                    return;
+                }
+
+                try self.addToken(if (matches_arrow) .RightArrow else .Minus, .{ .start = tokStartLoc, .end = self.currentLocation() });
             },
             '*' => try self.addToken(.Star, .{ .start = tokStartLoc, .end = self.currentLocation() }),
             '/' => try self.addToken(.Slash, .{ .start = tokStartLoc, .end = self.currentLocation() }),

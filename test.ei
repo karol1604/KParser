@@ -10,3 +10,7 @@ let t := {
 	a;
 	c + 10;
 };
+
+let add2 := fn(j: Int, h: Int) -> j + h;
+
+12;

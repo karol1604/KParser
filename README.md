@@ -39,14 +39,14 @@ I'm also not sure about the `Checker` implementation. I've never written one bef
 ## Syntax (WIP)
 This is the syntax I'd like this language to have. This is subject to change.
 
-#### Variable declaration
+### Variable declaration
 If no type is provided, the compiler infers it
 ```eigen
 let x := 12;
 let y : Int = 13;
 ```
 
-#### Function definitions
+### Function definitions
 Function expressions are bound just like variables.
 ```eigen
 let f := fn(n: Int): Int -> {
@@ -65,14 +65,14 @@ add(1, 2);
 ```
 Here, the return type gets inferred. I'm not sure if this is a good idea tho. Maybe we should just require the return type to be specified? I don't know yet.
 
-#### Control flow
+### Control flow
 I'd like `if` to be an expression, so you can do stuff like
 ```eigen
 let x := if (cond) then 1 else 2; -- if returns Int
 let y := if (cond) then x + 1; -- if returns ?Int
 ```
 
-#### Pattern matching
+### Pattern matching
 I'd like to have type safe pattern matching so the compiler should check if the cases are exhaustive. I'm really not so sure about this tho. Luckily, I there's A LOT of time till I need to implement this.
 ```eigen
 let some_value : Int = some_function();

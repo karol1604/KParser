@@ -237,7 +237,7 @@ pub const Checker = struct {
             .IntLiteral => |int| return try self.typedExpression(.{ .IntLiteral = int }, expr.*.span, INT_TYPE_ID, typeHint),
             .BoolLiteral => |b| return try self.typedExpression(.{ .BoolLiteral = b }, expr.*.span, BOOL_TYPE_ID, typeHint),
             .Identifier => return try self.checkIdentifier(expr, typeHint),
-            .FunctionDeclaration => return try self.checkFunctionDeclaration(expr, typeHint), //{
+            .FunctionDeclaration => return try self.checkFunctionDeclaration(expr, typeHint),
             .Unary => return try self.checkUnaryExpression(expr, typeHint),
             .Binary => return try self.checkBinaryExpression(expr, typeHint),
             .Block => return try self.checkBlockExpression(expr, typeHint),

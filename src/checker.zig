@@ -2,6 +2,9 @@ const std = @import("std");
 const ast = @import("ast.zig");
 const utils = @import("utils.zig");
 const span_ = @import("span.zig");
+const diagnostics = @import("diagnostics.zig");
+
+const Report = diagnostics.Report;
 
 const Span = span_.Span;
 
@@ -116,7 +119,7 @@ pub const Checker = struct {
         return ptr;
     }
 
-    fn typeNameFromId(self: *Checker, id: TypeId) ?[]const u8 {
+    fn typeNameFromId(self: *const Checker, id: TypeId) ?[]const u8 {
         for (self.scopes.items) |*scope| {
             var it = scope.types.iterator();
             while (it.next()) |entry| {
@@ -153,7 +156,7 @@ pub const Checker = struct {
         try scope.types.put(name, id);
     }
 
-    fn lookupType(self: *Checker, name_: ?[]const u8) ?TypeId {
+    fn lookupType(self: *const Checker, name_: ?[]const u8) ?TypeId {
         if (name_) |name| {
             for (self.scopes.items) |*scope| {
                 if (scope.types.get(name) != null) {
@@ -173,7 +176,7 @@ pub const Checker = struct {
         try scope.variables.put(name, type_id);
     }
 
-    fn lookupVar(self: *Checker, name: []const u8) ?TypeId {
+    fn lookupVar(self: *const Checker, name: []const u8) ?TypeId {
         for (self.scopes.items) |*scope| {
             if (scope.variables.get(name) != null) {
                 return scope.variables.get(name);
@@ -231,192 +234,13 @@ pub const Checker = struct {
 
     fn checkExpression(self: *Checker, expr: *const ast.Expression, typeHint: ?TypeId) anyerror!*CheckedExpression {
         switch (expr.*.kind) {
-            .IntLiteral => |int| {
-                return try self.typedExpression(.{ .IntLiteral = int }, expr.*.span, INT_TYPE_ID, typeHint);
-            },
-            .BoolLiteral => |b| {
-                return try self.typedExpression(.{ .BoolLiteral = b }, expr.*.span, BOOL_TYPE_ID, typeHint);
-            },
-            .Identifier => |ident| {
-                // const scope = self.currentScope();
-                // const typeId = scope.variables.get(ident);
-                const typeId = self.lookupVar(ident);
-                if (typeId) |ty| {
-                    return try self.typedExpression(.{ .Identifier = ident }, expr.*.span, ty, typeHint);
-                } else {
-                    std.debug.print("Unknown variable `{s}` at {any}\n", .{ ident, expr.*.span });
-                    return error.UnknownVariable;
-                }
-            },
-
-            .FunctionDeclaration => |decl| {
-                // TODO: remove this unwrap
-                const returnType = self.lookupType(decl.returnType);
-                var params = std.ArrayList(*CheckedFunctionParameter).init(self.alloc);
-                var body = std.ArrayList(*CheckedStatement).init(self.alloc);
-
-                try self.pushScope();
-
-                for (decl.parameters.items) |param| {
-                    const paramType = self.lookupType(param.type);
-                    if (paramType == null) {
-                        std.debug.print("Unknown type `{s}` at {any}\n", .{ param.type, expr.*.span });
-                        return error.UnknownType;
-                    }
-                    try params.append(try self.makePointer(CheckedFunctionParameter, .{
-                        .name = param.name,
-                        .typeId = paramType.?,
-                    }));
-                    try self.declareVar(param.name, paramType.?);
-                }
-
-                for (decl.body.items) |stmt| {
-                    const checkedStmt = try self.checkStatement(stmt);
-                    try body.append(checkedStmt);
-                }
-
-                if (body.items.len == 0) {
-                    std.debug.print("Function body is empty at {any}\n", .{expr.*.span});
-                    return error.FunctionBodyEmpty;
-                }
-                const lastStmtTypeId = body.items[body.items.len - 1].*.expr.*.typeId;
-                if (returnType != null and returnType != lastStmtTypeId) {
-                    std.debug.print("Type mismatch: Function return type marked as `{s}` but returns `{s}` at {any}\n", .{ self.typeNameFromId(returnType.?).?, self.typeNameFromId(lastStmtTypeId).?, expr.*.span });
-                    return error.FunctionReturnTypeMismatch;
-                }
-
-                self.popScope();
-
-                // NOTE: Hack here
-                return self.typedExpression(
-                    .{ .FunctionDeclaration = .{
-                        .parameters = params,
-                        .returnType = if (returnType) |t| t else lastStmtTypeId,
-                        .body = body,
-                    } },
-                    expr.*.span,
-                    EMPTY_TYPE_ID,
-                    typeHint,
-                );
-            },
-            .Unary => |unary| {
-                switch (unary.operator) {
-                    .Not => {
-                        const right = try self.checkExpression(unary.right, BOOL_TYPE_ID);
-                        return try self.typedExpression(
-                            .{ .Unary = .{
-                                .operator = unary.operator,
-                                .right = right,
-                            } },
-                            expr.*.span,
-                            BOOL_TYPE_ID,
-                            typeHint,
-                        );
-                    },
-                    .Plus, .Minus => {
-                        const right = try self.checkExpression(unary.right, INT_TYPE_ID);
-                        return try self.typedExpression(
-                            .{ .Unary = .{
-                                .operator = unary.operator,
-                                .right = right,
-                            } },
-                            expr.*.span,
-                            INT_TYPE_ID,
-                            typeHint,
-                        );
-                    },
-                }
-            },
-
-            .Binary => |binary| {
-                switch (binary.operator) {
-                    .Plus, .Minus, .Multiply, .Divide, .Exponent => {
-                        const left = try self.checkExpression(binary.left, INT_TYPE_ID);
-                        const right = try self.checkExpression(binary.right, INT_TYPE_ID);
-                        return try self.typedExpression(
-                            .{ .Binary = .{
-                                .left = left,
-                                .operator = binary.operator,
-                                .right = right,
-                            } },
-                            expr.*.span,
-                            INT_TYPE_ID,
-                            typeHint,
-                        );
-                    },
-                    .LessThan, .GreaterThan, .LessThanOrEqual, .GreaterThanOrEqual => {
-                        const left = try self.checkExpression(binary.left, INT_TYPE_ID);
-                        const right = try self.checkExpression(binary.right, INT_TYPE_ID);
-                        return try self.typedExpression(
-                            .{ .Binary = .{
-                                .left = left,
-                                .operator = binary.operator,
-                                .right = right,
-                            } },
-                            expr.*.span,
-                            BOOL_TYPE_ID,
-                            typeHint,
-                        );
-                    },
-                    .Equal, .NotEqual => {
-                        const left = try self.checkExpression(binary.left, null);
-                        const right = try self.checkExpression(binary.right, left.typeId);
-
-                        return try self.typedExpression(
-                            .{ .Binary = .{
-                                .left = left,
-                                .operator = binary.operator,
-                                .right = right,
-                            } },
-                            expr.*.span,
-                            BOOL_TYPE_ID,
-                            typeHint,
-                        );
-                    },
-                    .LogicalAnd, .LogicalOr => {
-                        const left = try self.checkExpression(binary.left, BOOL_TYPE_ID);
-                        const right = try self.checkExpression(binary.right, BOOL_TYPE_ID);
-
-                        return try self.typedExpression(
-                            .{ .Binary = .{
-                                .left = left,
-                                .operator = binary.operator,
-                                .right = right,
-                            } },
-                            expr.*.span,
-                            BOOL_TYPE_ID,
-                            typeHint,
-                        );
-                    },
-                    // else => {
-                    //     return error.UnknownBinaryOperator;
-                    // },
-                }
-            },
-            .Block => |block| {
-                try self.pushScope();
-                var body = std.ArrayList(*CheckedStatement).init(self.alloc);
-                errdefer body.deinit();
-
-                for (block.body.items) |stmt| {
-                    const checkedStmt = try self.checkStatement(stmt);
-                    try body.append(checkedStmt);
-                }
-
-                if (body.items.len == 0) {
-                    std.debug.print("Block is empty at {any}\n", .{expr.*.span});
-                    return error.BlockEmpty;
-                }
-
-                self.popScope();
-
-                return try self.typedExpression(
-                    .{ .Block = body },
-                    expr.*.span,
-                    EMPTY_TYPE_ID,
-                    typeHint,
-                );
-            },
+            .IntLiteral => |int| return try self.typedExpression(.{ .IntLiteral = int }, expr.*.span, INT_TYPE_ID, typeHint),
+            .BoolLiteral => |b| return try self.typedExpression(.{ .BoolLiteral = b }, expr.*.span, BOOL_TYPE_ID, typeHint),
+            .Identifier => return try self.checkIdentifier(expr, typeHint),
+            .FunctionDeclaration => return try self.checkFunctionDeclaration(expr, typeHint), //{
+            .Unary => return try self.checkUnaryExpression(expr, typeHint),
+            .Binary => return try self.checkBinaryExpression(expr, typeHint),
+            .Block => return try self.checkBlockExpression(expr, typeHint),
             // else => {
             //     std.debug.print("Unknown expression type \n", .{});
             //     return error.UnknownExpressionType;
@@ -424,7 +248,220 @@ pub const Checker = struct {
         }
     }
 
-    fn typedExpression(self: *Checker, res: CheckedExpressionData, span: Span, resType: TypeId, typeHint: ?TypeId) !*CheckedExpression {
+    fn checkIdentifier(
+        self: *const Checker,
+        expr: *const ast.Expression,
+        typeHint: ?TypeId,
+    ) !*CheckedExpression {
+        const ident = expr.*.kind.Identifier;
+        const typeId = self.lookupVar(ident);
+        if (typeId) |ty| {
+            return try self.typedExpression(.{ .Identifier = ident }, expr.*.span, ty, typeHint);
+        } else {
+            std.debug.print("Unknown variable `{s}` at {any}\n", .{ ident, expr.*.span });
+            return error.UnknownVariable;
+        }
+    }
+
+    fn checkBlockExpression(
+        self: *Checker,
+        expr: *const ast.Expression,
+        typeHint: ?TypeId,
+    ) !*CheckedExpression {
+        const block = expr.*.kind.Block;
+        try self.pushScope();
+        var body = std.ArrayList(*CheckedStatement).init(self.alloc);
+        errdefer body.deinit();
+
+        for (block.body.items) |stmt| {
+            const checkedStmt = try self.checkStatement(stmt);
+            try body.append(checkedStmt);
+        }
+
+        if (body.items.len == 0) {
+            std.debug.print("Block is empty at {any}\n", .{expr.*.span});
+            return error.BlockEmpty;
+        }
+
+        self.popScope();
+
+        return try self.typedExpression(
+            .{ .Block = body },
+            expr.*.span,
+            EMPTY_TYPE_ID,
+            typeHint,
+        );
+    }
+
+    fn checkUnaryExpression(
+        self: *Checker,
+        expr: *const ast.Expression,
+        typeHint: ?TypeId,
+    ) !*CheckedExpression {
+        const unary = expr.*.kind.Unary;
+        switch (unary.operator) {
+            .Not => {
+                const right = try self.checkExpression(unary.right, BOOL_TYPE_ID);
+                return try self.typedExpression(
+                    .{ .Unary = .{
+                        .operator = unary.operator,
+                        .right = right,
+                    } },
+                    expr.*.span,
+                    BOOL_TYPE_ID,
+                    typeHint,
+                );
+            },
+            .Plus, .Minus => {
+                const right = try self.checkExpression(unary.right, INT_TYPE_ID);
+                return try self.typedExpression(
+                    .{ .Unary = .{
+                        .operator = unary.operator,
+                        .right = right,
+                    } },
+                    expr.*.span,
+                    INT_TYPE_ID,
+                    typeHint,
+                );
+            },
+        }
+    }
+
+    fn checkBinaryExpression(
+        self: *Checker,
+        expr: *const ast.Expression,
+        typeHint: ?TypeId,
+    ) !*CheckedExpression {
+        const binary = expr.*.kind.Binary;
+        switch (binary.operator) {
+            .Plus, .Minus, .Multiply, .Divide, .Exponent => {
+                const left = try self.checkExpression(binary.left, INT_TYPE_ID);
+                const right = try self.checkExpression(binary.right, INT_TYPE_ID);
+                return try self.typedExpression(
+                    .{ .Binary = .{
+                        .left = left,
+                        .operator = binary.operator,
+                        .right = right,
+                    } },
+                    expr.*.span,
+                    INT_TYPE_ID,
+                    typeHint,
+                );
+            },
+            .LessThan, .GreaterThan, .LessThanOrEqual, .GreaterThanOrEqual => {
+                const left = try self.checkExpression(binary.left, INT_TYPE_ID);
+                const right = try self.checkExpression(binary.right, INT_TYPE_ID);
+                return try self.typedExpression(
+                    .{ .Binary = .{
+                        .left = left,
+                        .operator = binary.operator,
+                        .right = right,
+                    } },
+                    expr.*.span,
+                    BOOL_TYPE_ID,
+                    typeHint,
+                );
+            },
+            .Equal, .NotEqual => {
+                const left = try self.checkExpression(binary.left, null);
+                const right = try self.checkExpression(binary.right, left.typeId);
+
+                return try self.typedExpression(
+                    .{ .Binary = .{
+                        .left = left,
+                        .operator = binary.operator,
+                        .right = right,
+                    } },
+                    expr.*.span,
+                    BOOL_TYPE_ID,
+                    typeHint,
+                );
+            },
+            .LogicalAnd, .LogicalOr => {
+                const left = try self.checkExpression(binary.left, BOOL_TYPE_ID);
+                const right = try self.checkExpression(binary.right, BOOL_TYPE_ID);
+
+                return try self.typedExpression(
+                    .{ .Binary = .{
+                        .left = left,
+                        .operator = binary.operator,
+                        .right = right,
+                    } },
+                    expr.*.span,
+                    BOOL_TYPE_ID,
+                    typeHint,
+                );
+            },
+            // else => {
+            //     return error.UnknownBinaryOperator;
+            // },
+        }
+    }
+
+    fn checkFunctionDeclaration(
+        self: *Checker,
+        expr: *const ast.Expression,
+        typeHint: ?TypeId,
+    ) !*CheckedExpression {
+        const decl = expr.*.kind.FunctionDeclaration;
+        const returnType = if (decl.returnType) |ty| self.lookupType(ty.*.kind.Identifier) else null;
+        var params = std.ArrayList(*CheckedFunctionParameter).init(self.alloc);
+        var body = std.ArrayList(*CheckedStatement).init(self.alloc);
+
+        try self.pushScope();
+
+        for (decl.parameters.items) |param| {
+            const paramType = self.lookupType(param.type);
+            if (paramType == null) {
+                std.debug.print("Unknown type `{s}` at {any}\n", .{ param.type, expr.*.span });
+                return error.UnknownType;
+            }
+            try params.append(try self.makePointer(CheckedFunctionParameter, .{
+                .name = param.name,
+                .typeId = paramType.?,
+            }));
+            try self.declareVar(param.name, paramType.?);
+        }
+
+        for (decl.body.items) |stmt| {
+            const checkedStmt = try self.checkStatement(stmt);
+            try body.append(checkedStmt);
+        }
+
+        if (body.items.len == 0) {
+            std.debug.print("Function body is empty at {any}\n", .{expr.*.span});
+            return error.FunctionBodyEmpty;
+        }
+        const lastStmtTypeId = body.items[body.items.len - 1].*.expr.*.typeId;
+        if (returnType != null and returnType != lastStmtTypeId) {
+            // std.debug.print("Type mismatch: Function return type marked as `{s}` but returns `{s}` at {any}\n", .{ self.typeNameFromId(returnType.?).?, self.typeNameFromId(lastStmtTypeId).?, expr.*.kind.FunctionDeclaration.body.items[body.items.len - 1].*.span });
+            std.debug.print("Type mismatch: Function return type marked as `{s}` but returns `{s}` at {any}\n", .{ self.typeNameFromId(returnType.?).?, self.typeNameFromId(lastStmtTypeId).?, decl.returnType.?.span });
+
+            return error.FunctionReturnTypeMismatch;
+        }
+
+        self.popScope();
+
+        // NOTE: Hack here
+        return self.typedExpression(
+            .{ .FunctionDeclaration = .{
+                .parameters = params,
+                .returnType = if (returnType) |t| t else lastStmtTypeId,
+                .body = body,
+            } },
+            expr.*.span,
+            EMPTY_TYPE_ID,
+            typeHint,
+        );
+    }
+
+    fn typedExpression(
+        self: *const Checker,
+        res: CheckedExpressionData,
+        span: Span,
+        resType: TypeId,
+        typeHint: ?TypeId,
+    ) !*CheckedExpression {
         if (typeHint) |hint| {
             if (resType != hint) {
                 std.debug.print("Type mismatch: expected type {s}, got {s} at {s}\n", .{ self.typeNameFromId(hint).?, self.typeNameFromId(resType).?, span });

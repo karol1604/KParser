@@ -194,7 +194,7 @@ fn prettyPrintRec(
 
             std.debug.print(")", .{});
             if (decl.returnType) |ty| {
-                std.debug.print(" -> {s}\n", .{ty});
+                std.debug.print(" -> {s}\n", .{ty.*.kind.Identifier});
             } else {
                 std.debug.print("\n", .{});
             }

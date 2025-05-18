@@ -55,7 +55,7 @@ pub const ExpressionKind = union(enum) {
 
     FunctionDeclaration: struct {
         parameters: std.ArrayList(*FunctionParameter),
-        returnType: ?[]const u8,
+        returnType: ?*const Expression,
         body: std.ArrayList(*Statement),
     },
 

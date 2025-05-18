@@ -186,10 +186,15 @@ pub const Parser = struct {
 
         try self.expectToken(.RParen);
 
-        var returnType: ?[]const u8 = null;
+        var returnType: ?*const Expression = null;
         if (self.currentToken().type == .Colon) {
             try self.expectToken(.Colon);
-            returnType = try self.expectIdent();
+            const returnTypeSpan = self.currentToken().span;
+            const returnTypeStr = try self.expectIdent();
+            returnType = try self.makePointer(Expression, .{
+                .kind = .{ .Identifier = returnTypeStr },
+                .span = returnTypeSpan,
+            });
         }
 
         try self.expectToken(.RightArrow);

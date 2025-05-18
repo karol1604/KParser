@@ -1,16 +1,10 @@
 let a := 1;
-let abba := true;
+1 - a;
+1 + 2 / 2 - 1;
 
-let add := fn(x: Int, y: Int): Bool -> {
-    x < y;
-};
-
-let t := {
-    let c := 1;
-	a;
-	c + 10;
-};
-
-let add2 := fn(j: Int, h: Int) -> j + h;
-
-12;
+{
+    1 + 1;
+		2 + 3;
+		a + 1;
+		let b : Int = 2;
+}

@@ -49,14 +49,14 @@ let y : Int = 13;
 ### Function definitions
 Function expressions are bound just like variables.
 ```eigen
-let f := fn(n: Int): Int -> {
-    let foo := n + 1;
-    foo;
-};
+let f : Int -> Int =
+    λ n .
+        let foo := n + 1;
+        foo;
 ```
 In this example, the variable `f` would be of type `(Int) -> Int`. You can also omit the braces if you return a single expression. For example
 ```eigen
-let add := fn(x: Int, y: Int) -> a + b;
+let add : Int -> Int = λ (x, y) . x + y;
 
 -- to call it
 add(1, 2);

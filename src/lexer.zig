@@ -18,12 +18,18 @@ pub const Lexer = struct {
     current: usize = 0, // offset
     line: usize = 1, // current line
     col: usize = 1, // current column
+    utf8Iter: std.unicode.Utf8Iterator,
 
     pub fn init(source: []const u8, alloc: std.mem.Allocator) !Lexer {
         const tokens = std.ArrayList(Token).init(alloc);
         errdefer tokens.deinit();
 
-        return .{ .source = source, .tokens = tokens, .alloc = alloc };
+        return .{
+            .source = source,
+            .tokens = tokens,
+            .alloc = alloc,
+            .utf8Iter = (try std.unicode.Utf8View.init(source)).iterator(),
+        };
     }
 
     fn isAtEnd(self: *const Lexer) bool {
@@ -38,9 +44,17 @@ pub const Lexer = struct {
         };
     }
 
-    fn advance(self: *Lexer) u8 {
-        const c = self.source[self.current];
-        self.current += 1;
+    fn advance(self: *Lexer) !u21 {
+        // const c = @as(u21, self.source[self.current]);
+        // self.current += 1;
+        const c = self.utf8Iter.nextCodepoint() orelse 0;
+
+        // if (c_) |c| {
+        var buf_c: [4]u8 = undefined;
+        const utf8_bytes = try utils.encodeCodepointToUtf8(c, &buf_c);
+        self.current += utf8_bytes.len;
+        std.debug.print(">>>>>>>> advance on char: {d}:`{s}`\n", .{ c, utf8_bytes });
+        std.debug.print("advancing by {d} bytes\n", .{utf8_bytes.len});
 
         if (c == '\n') {
             self.line += 1;
@@ -48,27 +62,31 @@ pub const Lexer = struct {
         } else {
             self.col += 1;
         }
-
-        return c;
+        // } else std.debug.print("GOT NULL\n", .{});
+        //
+        return c; //_ orelse 0;
     }
 
-    fn peek(self: *const Lexer, offset: usize) u8 {
-        if (self.current + offset >= self.source.len) {
-            return 0; // Return null byte for end-of-file or out-of-bounds
-        }
-        return self.source[self.current + offset];
+    fn peek(self: *const Lexer, _: usize) u21 {
+        var it = self.utf8Iter;
+        return it.nextCodepoint() orelse 0;
+        // if (self.current + offset >= self.source.len) {
+        //     return 0; // Return null byte for end-of-file or out-of-bounds
+        // }
+        // return self.source[self.current + offset];
     }
 
-    fn match(self: *Lexer, expected: u8) bool {
+    fn match(self: *Lexer, expected: u21) !bool {
         if (self.isAtEnd() or self.source[self.current] != expected) return false;
 
-        _ = self.advance();
+        _ = try self.advance();
         return true;
     }
 
     fn makeNumber(self: *Lexer, start: Location) !void {
+        std.debug.print("Making number for `{d}`\n", .{self.peek(0)});
         while (utils.isDigit(self.peek(0))) {
-            _ = self.advance();
+            _ = try self.advance();
         }
         const tokSpan = Span{ .start = start, .end = self.currentLocation() };
         const i = try std.fmt.parseInt(i64, self.source[tokSpan.start.offset..tokSpan.end.offset], 10);
@@ -77,8 +95,8 @@ pub const Lexer = struct {
     }
 
     fn makeIdent(self: *Lexer, start: Location) !void {
-        while (utils.isAlphaNumeric(self.peek(0))) {
-            _ = self.advance();
+        while (utils.isAlphaNumeric(self.peek(0)) or utils.isSpecial(self.peek(0))) {
+            _ = try self.advance();
         }
 
         const tokSpan = Span{ .start = start, .end = self.currentLocation() };
@@ -102,13 +120,19 @@ pub const Lexer = struct {
     }
 
     fn makeToken(self: *Lexer, tokStartLoc: Location) !void {
-        const c = self.advance();
+        const c = try self.advance();
+
+        var buf_c: [4]u8 = undefined;
+        const utf8_bytes = try utils.encodeCodepointToUtf8(c, &buf_c);
+
+        std.debug.print("lexing char: {d}:`{s}`\n", .{ c, utf8_bytes });
+
+        // var buff: [4]u8 = undefined;
+        // const cr = try utils.encodeCodepointToUtf8(c, &buff);
 
         switch (c) {
-            // ' ', '\t' => {
-            //     // idk what to do for the \t
-            // },
-
+            // ' ', '\t' => _ = try self.advance(),
+            //
             // '\n' => {
             //     self.line += 1;
             //     self.col = 1;
@@ -121,12 +145,12 @@ pub const Lexer = struct {
 
             '+' => try self.addToken(.Plus, .{ .start = tokStartLoc, .end = self.currentLocation() }),
             '-' => {
-                const matches_arrow = self.match('>');
-                const matches_comment = self.match('-');
+                const matches_arrow = try self.match('>');
+                const matches_comment = try self.match('-');
 
                 if (matches_comment) {
                     while (self.peek(0) != '\n' and !self.isAtEnd()) {
-                        _ = self.advance();
+                        _ = try self.advance();
                     }
                     return;
                 }
@@ -145,72 +169,79 @@ pub const Lexer = struct {
             '}' => try self.addToken(.RBrace, .{ .start = tokStartLoc, .end = self.currentLocation() }),
 
             '<' => {
-                const matches = self.match('=');
+                const matches = try self.match('=');
                 try self.addToken(if (matches) .LessThanOrEqual else .LessThan, .{ .start = tokStartLoc, .end = self.currentLocation() });
             },
 
             '>' => {
-                const matches = self.match('=');
+                const matches = try self.match('=');
                 try self.addToken(if (matches) .GreaterThanOrEqual else .GreaterThan, .{ .start = tokStartLoc, .end = self.currentLocation() });
             },
 
             '=' => {
-                const matches = self.match('=');
+                const matches = try self.match('=');
                 try self.addToken(if (matches) .DoubleEqual else .Equal, .{ .start = tokStartLoc, .end = self.currentLocation() });
             },
 
             '!' => {
-                const matches = self.match('=');
+                const matches = try self.match('=');
                 try self.addToken(if (matches) .NotEqual else .Bang, .{ .start = tokStartLoc, .end = self.currentLocation() });
             },
 
             '|' => {
-                const matches = self.match('|');
+                const matches = try self.match('|');
                 try self.addToken(if (matches) .DoublePipe else .Pipe, .{ .start = tokStartLoc, .end = self.currentLocation() });
             },
 
             '&' => {
-                const matches = self.match('&');
+                const matches = try self.match('&');
                 try self.addToken(if (matches) .DoubleAmpersand else .Ampersand, .{ .start = tokStartLoc, .end = self.currentLocation() });
             },
 
             '0'...'9' => {
                 try self.makeNumber(tokStartLoc);
             },
-            //
+
             'a'...'z', 'A'...'Z', '_' => {
                 try self.makeIdent(tokStartLoc);
             },
+            'ℝ', 'ℕ', 215, 955 => {
+                // try self.addToken(.Star, .{ .start = tokStartLoc, .end = self.currentLocation() });
+                try self.makeIdent(tokStartLoc);
+                std.debug.print("WE GOT IT\n", .{});
+            }, // TODO: remove this
             else => {
+                var buf: [4]u8 = undefined;
+                const utf8C = try utils.encodeCodepointToUtf8(c, &buf);
+                std.debug.print("Invalid character: `{s}`[c={d}] on line {d}:{d}\n", .{ utf8C, c, self.line, self.col });
                 return LexerError.InvalidCharacter;
             },
         }
     }
 
     pub fn tokenize(self: *Lexer) !void {
+        // var utf8 = (try std.unicode.Utf8View.init(self.source)).iterator();
+
         while (!self.isAtEnd()) {
-            const startLoc = self.currentLocation();
+            // while (self.utf8Iter.nextCodepoint()) |c| {
+            // const c_ = self.utf8Iter.nextCodepoint();
+
+            // if (c_) |c| {
 
             const c = self.peek(0);
+            std.debug.print("CCCCCCCCCCCCCCC char: {d}\n", .{c});
             if (c == ' ' or c == '\t' or c == '\r' or c == '\n') {
-                _ = self.advance();
+                _ = try self.advance();
                 continue;
             }
 
+            const startLoc = self.currentLocation();
+            // std.debug.print("Passing in char to lex: {d}\n", .{c});
             try self.makeToken(startLoc);
         }
+        // } else break;
+        // }
         try self.addToken(.Eof, Span{ .start = self.currentLocation(), .end = self.currentLocation() });
-    }
-
-    pub fn dummy(self: *Lexer, idx: usize) err.LexerResult {
-        return err.LexerResult{
-            .err = .{
-                .type = LexerError.InvalidCharacter,
-                .token = self.tokens.items[idx],
-                .message = "Dummy error",
-                .source = self.source,
-            },
-        };
     }
 
     pub fn deinit(self: *Lexer) void {

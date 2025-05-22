@@ -446,7 +446,7 @@ pub const Checker = struct {
         return self.typedExpression(
             .{ .FunctionDeclaration = .{
                 .parameters = params,
-                .returnType = if (returnType) |t| t else lastStmtTypeId,
+                .returnType = returnType orelse lastStmtTypeId,
                 .body = body,
             } },
             expr.*.span,
@@ -462,16 +462,9 @@ pub const Checker = struct {
         resType: TypeId,
         typeHint: ?TypeId,
     ) !*CheckedExpression {
-        if (typeHint) |hint| {
-            if (resType != hint) {
-                std.debug.print("Type mismatch: expected type {s}, got {s} at {s}\n", .{ self.typeNameFromId(hint).?, self.typeNameFromId(resType).?, span });
-                return error.TypeMismatch;
-            } else {
-                return self.makePointer(CheckedExpression, CheckedExpression{
-                    .typeId = resType,
-                    .data = res,
-                });
-            }
+        if (typeHint != null and resType != typeHint) {
+            std.debug.print("Type mismatch: expected type {s}, got {s} at {s}\n", .{ self.typeNameFromId(typeHint.?).?, self.typeNameFromId(resType).?, span });
+            return error.TypeMismatch;
         } else {
             return self.makePointer(CheckedExpression, CheckedExpression{
                 .typeId = resType,

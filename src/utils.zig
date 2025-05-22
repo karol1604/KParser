@@ -2,16 +2,37 @@ const std = @import("std");
 const ast = @import("ast.zig");
 const checker = @import("checker.zig");
 
-pub fn isDigit(c: u8) bool {
+pub fn isDigit(c: u21) bool {
     return c >= '0' and c <= '9';
 }
 
-pub fn isAlpha(c: u8) bool {
+pub fn isAlpha(c: u21) bool {
     return (c >= 'a' and c <= 'z') or (c >= 'A' and c <= 'Z');
 }
 
-pub fn isAlphaNumeric(c: u8) bool {
+pub fn isAlphaNumeric(c: u21) bool {
     return isAlpha(c) or isDigit(c);
+}
+
+pub fn isSpecial(c: u21) bool {
+    const specialChars = &[_]u21{
+        'ℝ',
+        'ℕ',
+        'ℤ',
+        '×',
+    };
+    const needle = &[_]u21{c};
+
+    if (std.mem.indexOf(u21, specialChars, needle) != null) {
+        return true;
+    }
+
+    return false;
+}
+
+pub fn encodeCodepointToUtf8(cp: u21, buf: *[4]u8) ![]const u8 {
+    const len = try std.unicode.utf8Encode(cp, buf);
+    return buf[0..len];
 }
 
 pub fn readFile(allocator: std.mem.Allocator, path: []const u8) ![]u8 {

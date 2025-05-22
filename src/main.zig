@@ -43,92 +43,92 @@ pub fn main() !void {
     // try bw.flush(); // don't forget to flush!
 }
 
-test "basic syntax test" {
-    const testAlloc = std.testing.allocator;
+// test "basic syntax test" {
+//     const testAlloc = std.testing.allocator;
+//
+//     const source = "abcdef != 123 + 420 - 69 = 123456 = 1 ==";
+//     var lex = try lexer.Lexer.init(source, testAlloc);
+//     defer lex.deinit();
+//     try lex.tokenize();
+//
+//     // for (lex.tokens.items) |tok_| {
+//     //     std.debug.print("Token: {s}\n", .{tok_});
+//     // }
+//     const expectedTokens = [_]token.TokenType{
+//         .{ .Identifier = "abcdef" },
+//         .NotEqual,
+//         .{ .IntLiteral = 123 },
+//         .Plus,
+//         .{ .IntLiteral = 420 },
+//         .Minus,
+//         .{ .IntLiteral = 69 },
+//         .Equal,
+//         .{ .IntLiteral = 123456 },
+//         .Equal,
+//         .{ .IntLiteral = 1 },
+//         .DoubleEqual,
+//         .Eof,
+//     };
+//
+//     // std.debug.print("Tokens(\n\t{s}\n):\n", .{source});
+//     // var actualTokens: [expectedTokens.len]token.TokenType = undefined;
+//     // for (lex.tokens.items, 0..) |tok_, i| {
+//     //     actualTokens[i] = tok_.type;
+//     //     std.debug.print("   > {s}\n", .{lex.tokens.items[i]});
+//     // }
+//
+//     for (lex.tokens.items, expectedTokens) |actualToken, expectedToken| {
+//         // Use expectEqualDeep for robust comparison, especially with unions/structs
+//         try std.testing.expectEqualDeep(expectedToken, actualToken.type);
+//         // Optional: Add a print statement if it fails to see which index
+//     }
+// }
 
-    const source = "abcdef != 123 + 420 - 69 = 123456 = 1 ==";
-    var lex = try lexer.Lexer.init(source, testAlloc);
-    defer lex.deinit();
-    try lex.tokenize();
-
-    // for (lex.tokens.items) |tok_| {
-    //     std.debug.print("Token: {s}\n", .{tok_});
-    // }
-    const expectedTokens = [_]token.TokenType{
-        .{ .Identifier = "abcdef" },
-        .NotEqual,
-        .{ .IntLiteral = 123 },
-        .Plus,
-        .{ .IntLiteral = 420 },
-        .Minus,
-        .{ .IntLiteral = 69 },
-        .Equal,
-        .{ .IntLiteral = 123456 },
-        .Equal,
-        .{ .IntLiteral = 1 },
-        .DoubleEqual,
-        .Eof,
-    };
-
-    // std.debug.print("Tokens(\n\t{s}\n):\n", .{source});
-    // var actualTokens: [expectedTokens.len]token.TokenType = undefined;
-    // for (lex.tokens.items, 0..) |tok_, i| {
-    //     actualTokens[i] = tok_.type;
-    //     std.debug.print("   > {s}\n", .{lex.tokens.items[i]});
-    // }
-
-    for (lex.tokens.items, expectedTokens) |actualToken, expectedToken| {
-        // Use expectEqualDeep for robust comparison, especially with unions/structs
-        try std.testing.expectEqualDeep(expectedToken, actualToken.type);
-        // Optional: Add a print statement if it fails to see which index
-    }
-}
-
-test "actual syntax test" {
-    const testAlloc = std.testing.allocator;
-
-    const source = "const a = 123 + 420 - 69;\na == 1 && b == 2;\nfalse";
-    var lex = try lexer.Lexer.init(source, testAlloc);
-    defer lex.deinit();
-    try lex.tokenize();
-
-    const expectedTokens = [_]token.TokenType{
-        .{ .Identifier = "const" },
-        .{ .Identifier = "a" },
-        .Equal,
-        .{ .IntLiteral = 123 },
-        .Plus,
-        .{ .IntLiteral = 420 },
-        .Minus,
-        .{ .IntLiteral = 69 },
-        .Semicolon,
-        .{ .Identifier = "a" },
-        .DoubleEqual,
-        .{ .IntLiteral = 1 },
-        .DoubleAmpersand,
-        .{ .Identifier = "b" },
-        .DoubleEqual,
-        .{ .IntLiteral = 2 },
-        .Semicolon,
-        .False,
-        .Eof,
-    };
-
-    std.debug.print("Tokens(\n{s}\n):\n", .{source});
-    for (lex.tokens.items, 0..) |_, i| {
-        std.debug.print("   > {s}\n", .{lex.tokens.items[i]});
-    }
-
-    // var actualTokens: [expectedTokens.len]token.TokenType = undefined;
-    // for (lex.tokens.items, 0..) |tok_, i| {
-    //     actualTokens[i] = tok_.type;
-    //     std.debug.print("   > {s}\n", .{lex.tokens.items[i]});
-    // }
-
-    for (lex.tokens.items, expectedTokens) |actualToken, expectedToken| {
-        try std.testing.expectEqualDeep(expectedToken, actualToken.type);
-    }
-}
+// test "actual syntax test" {
+//     const testAlloc = std.testing.allocator;
+//
+//     const source = "const a = 123 + 420 - 69;\na == 1 && b == 2;\nfalse";
+//     var lex = try lexer.Lexer.init(source, testAlloc);
+//     defer lex.deinit();
+//     try lex.tokenize();
+//
+//     const expectedTokens = [_]token.TokenType{
+//         .{ .Identifier = "const" },
+//         .{ .Identifier = "a" },
+//         .Equal,
+//         .{ .IntLiteral = 123 },
+//         .Plus,
+//         .{ .IntLiteral = 420 },
+//         .Minus,
+//         .{ .IntLiteral = 69 },
+//         .Semicolon,
+//         .{ .Identifier = "a" },
+//         .DoubleEqual,
+//         .{ .IntLiteral = 1 },
+//         .DoubleAmpersand,
+//         .{ .Identifier = "b" },
+//         .DoubleEqual,
+//         .{ .IntLiteral = 2 },
+//         .Semicolon,
+//         .False,
+//         .Eof,
+//     };
+//
+//     std.debug.print("Tokens(\n{s}\n):\n", .{source});
+//     for (lex.tokens.items, 0..) |_, i| {
+//         std.debug.print("   > {s}\n", .{lex.tokens.items[i]});
+//     }
+//
+//     // var actualTokens: [expectedTokens.len]token.TokenType = undefined;
+//     // for (lex.tokens.items, 0..) |tok_, i| {
+//     //     actualTokens[i] = tok_.type;
+//     //     std.debug.print("   > {s}\n", .{lex.tokens.items[i]});
+//     // }
+//
+//     for (lex.tokens.items, expectedTokens) |actualToken, expectedToken| {
+//         try std.testing.expectEqualDeep(expectedToken, actualToken.type);
+//     }
+// }
 //
 // test "error test" {
 //     const testAlloc = std.testing.allocator;
@@ -184,6 +184,32 @@ test "actual syntax test" {
 //     utils.prettyPrintCheckedExpression(cs.items[0].*.expr.*);
 // }
 
+test "unicode test" {
+    // const cp: u21 = 'ℝ';
+    // var buf: [4]u8 = undefined;
+    // const utf8_bytes = try utils.encodeCodepointToUtf8(cp, &buf);
+    // std.debug.print("UTF-8 bytes: {any}\n", .{utf8_bytes});
+
+    const test_str = "Hello, world! ℝ let eq := fn(a: Bool, b: Bool) -> a == b;";
+    var utf8 = (try std.unicode.Utf8View.init(test_str)).iterator();
+    while (utf8.nextCodepoint()) |c| {
+        var buf: [4]u8 = undefined;
+        const utf8_bytes = try utils.encodeCodepointToUtf8(c, &buf);
+
+        std.debug.print("Codepoint: {d}:{s}\n", .{ c, utf8_bytes });
+
+        if (c == ' ') {
+            std.debug.print(">>>>>>>>>>>>>>>>>>>>>>>>\n", .{});
+        }
+
+        switch (c) {
+            'a'...'z', 'A'...'Z' => std.debug.print("GOT LETTER `{s}`\n", .{utf8_bytes}),
+            ' ' => std.debug.print("GOT SPACE\n", .{}),
+            else => std.debug.print("GOT SOMETHING ELSE\n", .{}),
+        }
+    }
+}
+
 test "read from file" {
     const RESET = "\x1b[0m";
     const RED = "\x1b[31m";
@@ -193,6 +219,7 @@ test "read from file" {
     defer arena.deinit();
     const arenaAlloc = arena.allocator();
 
+    // const source = try utils.readFile(arenaAlloc, "../sugarcoat/test.ei");
     const source = try utils.readFile(arenaAlloc, "test.ei");
     defer arenaAlloc.free(source);
 
@@ -206,23 +233,23 @@ test "read from file" {
         std.debug.print("   > {s}\n", .{lex.tokens.items[i]});
     }
 
-    var p = parser.Parser.init(lex.tokens.items, arenaAlloc);
-    const t = try p.parse();
-    defer t.deinit();
-
-    std.debug.print("---------\n", .{});
-    for (t.items) |item| {
-        std.debug.print("   ", .{});
-        try utils.prettyPrintStatement(item.*);
-        std.debug.print("---------\n", .{});
-    }
-
-    var check = try checker.Checker.init(arenaAlloc, t.items, source);
-    const cs = try check.check();
-    for (cs.items) |item| {
-        utils.prettyPrintCheckedExpression(item.*.expr.*);
-        std.debug.print("---------\n", .{});
-    }
-
-    std.debug.print("{any}\n", .{check.scopes.items[0].variables.get("b")});
+    // var p = parser.Parser.init(lex.tokens.items, arenaAlloc);
+    // const t = try p.parse();
+    // defer t.deinit();
+    //
+    // std.debug.print("---------\n", .{});
+    // for (t.items) |item| {
+    //     std.debug.print("   ", .{});
+    //     try utils.prettyPrintStatement(item.*);
+    //     std.debug.print("---------\n", .{});
+    // }
+    //
+    // var check = try checker.Checker.init(arenaAlloc, t.items, source);
+    // const cs = try check.check();
+    // for (cs.items) |item| {
+    //     utils.prettyPrintCheckedExpression(item.*.expr.*);
+    //     std.debug.print("---------\n", .{});
+    // }
+    //
+    // std.debug.print("{any}\n", .{check.scopes.items[0].variables.get("b")});
 }

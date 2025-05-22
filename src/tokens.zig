@@ -38,6 +38,7 @@ pub const TokenType = union(enum) {
     // Keywords
     KeywordLet,
     KeywordFn,
+    KeywordRet,
 
     RightArrow,
 
@@ -62,6 +63,7 @@ pub const Keywords = std.StaticStringMap(TokenType).initComptime(.{
     .{ "false", .False },
     .{ "let", .KeywordLet },
     .{ "fn", .KeywordFn },
+    .{ "ret", .KeywordRet },
 });
 
 pub fn tokenTypeToString(tokenType: TokenType) []const u8 {
@@ -99,6 +101,7 @@ pub fn tokenTypeToString(tokenType: TokenType) []const u8 {
 
         .KeywordLet => return "KWLet",
         .KeywordFn => return "KWFn",
+        .KeywordRet => return "KWRet",
 
         .RightArrow => return "->",
 

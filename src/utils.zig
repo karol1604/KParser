@@ -15,14 +15,9 @@ pub fn isAlphaNumeric(c: u21) bool {
 }
 
 pub fn isSpecial(c: u21) bool {
-    const specialChars = &[_]u21{
-        'ℝ',
-        'ℕ',
-        'ℤ',
-        '×',
-    };
-    const needle = &[_]u21{c};
+    const specialChars = &[_]u21{ 'ℝ', 'ℕ', 'ℤ', '×' };
 
+    const needle = &[_]u21{c};
     if (std.mem.indexOf(u21, specialChars, needle) != null) {
         return true;
     }

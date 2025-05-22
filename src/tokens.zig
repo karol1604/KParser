@@ -39,8 +39,12 @@ pub const TokenType = union(enum) {
     KeywordLet,
     KeywordFn,
     KeywordRet,
+    KwLazy,
 
+    // Special characters
     RightArrow,
+    CartesianTimes,
+    Lambda,
 
     Comma,
     Dot,
@@ -64,6 +68,9 @@ pub const Keywords = std.StaticStringMap(TokenType).initComptime(.{
     .{ "let", .KeywordLet },
     .{ "fn", .KeywordFn },
     .{ "ret", .KeywordRet },
+    .{ "lazy", .KwLazy },
+    .{ "×", .CartesianTimes },
+    .{ "λ", .Lambda },
 });
 
 pub fn tokenTypeToString(tokenType: TokenType) []const u8 {
@@ -102,8 +109,11 @@ pub fn tokenTypeToString(tokenType: TokenType) []const u8 {
         .KeywordLet => return "KWLet",
         .KeywordFn => return "KWFn",
         .KeywordRet => return "KWRet",
+        .KwLazy => return "KWLazy",
 
         .RightArrow => return "->",
+        .CartesianTimes => return "×",
+        .Lambda => return "λ",
 
         .Comma => return ",",
         .Dot => return ".",

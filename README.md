@@ -25,6 +25,7 @@ Please ignore the error handling code. It's quite annoying to make good errors i
 I'm also not sure about the `Checker` implementation. I've never written one before and the sheer amount of design decisions to make overwhelm me. I'm probably gonna iterate and refactor it a LOT of times.
 
 ## Bugs
+- [ ] we are not properly assigning a type to a function variable
 - [FIXED] if the parser errors out, we directly return an error and we don't properly free the memory leading to memory leaks. Maybe we should use an arena allocator for this?
 - [FIXED] we somehow parse expressions like `1)`
 - [ ] we still can't parse expressions like `1 == -1` bc of a hack in the `Parser`. We either parse them and allow expressions like `1 +- 1` or just don't parse them at all. Gotta think about this one

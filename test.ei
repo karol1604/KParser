@@ -1,1 +1,23 @@
-lazy let eq : ℕ × ℕ -> Bool = λ x y . x == y;
+-- let eq : ℕ × ℕ -> Bool = λ x y . x == y;
+
+let x : Bool = true;
+
+-- let eq : ℤ × ℤ -> ∅ =
+--     λ x y .
+--       let foo := x + 1;
+--       foo - y;
+
+let z := 1;
+let eq := fn(x: Int, y: Int, z: Bool) -> {
+    let ℝ := 1;
+	x;
+	z;
+	ℝ == 1;
+};
+
+
+eq;
+-- let add := λ x y . x + y;
+-- let is_greater_5 := λ x . x > 5;
+-- let e := is_greater_5 ∘ add(1, 2);
+

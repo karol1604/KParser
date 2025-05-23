@@ -25,17 +25,15 @@ Please ignore the error handling code. It's quite annoying to make good errors i
 I'm also not sure about the `Checker` implementation. I've never written one before and the sheer amount of design decisions to make overwhelm me. I'm probably gonna iterate and refactor it a LOT of times.
 
 ## Bugs
-- [ ] we are not properly assigning a type to a function variable
-- [FIXED] if the parser errors out, we directly return an error and we don't properly free the memory leading to memory leaks. Maybe we should use an arena allocator for this?
-- [FIXED] we somehow parse expressions like `1)`
+- [ ] we are not properly assigning a type to a variable which is a function
 - [ ] we still can't parse expressions like `1 == -1` bc of a hack in the `Parser`. We either parse them and allow expressions like `1 +- 1` or just don't parse them at all. Gotta think about this one
 - this shit is prolly riddled with even more bugs tbh
 
 ## Todo
-- [x] Pipe `Span` into `Expression` and `Statement`. For now, we literally ignore any position info LOL
+- [ ] Remove `Statement` as everything is an expression now
 - [ ] Make some kind of `Diagnostic` struct or wtv for error handling bc now it's basically inexistent
-- [x] Add a notion of `Scope` or smth in the checker
 - [ ] Think about types and how should they work
+- [ ] This might be a stretch but i'd like to implement a simple symbolic engine
 
 ## Syntax (WIP)
 This is the syntax I'd like this language to have. This is subject to change.
@@ -57,12 +55,14 @@ let f : Int -> Int =
 ```
 In this example, the variable `f` would be of type `(Int) -> Int`. You can also omit the braces if you return a single expression. For example
 ```eigen
-let add : Int -> Int = λ (x, y) . x + y;
+let add : ℤ × ℤ -> ℤ = λ x y . x + y;
 
 -- to call it
 add(1, 2);
 -- or
 1 `add` 2;
+-- or maybe... (prolly not lol)
+add 1 2;
 ```
 Here, the return type gets inferred. I'm not sure if this is a good idea tho. Maybe we should just require the return type to be specified? I don't know yet.
 
@@ -71,6 +71,8 @@ I'd like `if` to be an expression, so you can do stuff like
 ```eigen
 let x := if (cond) then 1 else 2; -- if returns Int
 let y := if (cond) then x + 1; -- if returns ?Int
+
+let y : Int = if (cond) then x + 1; -- type error bc `y` is nullable so it should be ?Int
 ```
 
 ### Pattern matching

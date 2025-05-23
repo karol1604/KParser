@@ -205,12 +205,12 @@ pub const Lexer = struct {
             'a'...'z', 'A'...'Z', '_' => {
                 try self.makeIdent(tokStartLoc);
             },
-            'ℝ', 'ℕ', 215, 955 => {
-                // try self.addToken(.Star, .{ .start = tokStartLoc, .end = self.currentLocation() });
+            'ℝ', 'ℕ', 215, 955, 8484, 8709 => { // NOTE: this is kinda stupid tbh, should change it
                 try self.makeIdent(tokStartLoc);
                 std.debug.print("WE GOT IT\n", .{});
-            }, // TODO: remove this
+            },
             else => {
+                // TODO: remove this
                 var buf: [4]u8 = undefined;
                 const utf8C = try utils.encodeCodepointToUtf8(c, &buf);
                 std.debug.print("Invalid character: `{s}`[c={d}] on line {d}:{d}\n", .{ utf8C, c, self.line, self.col });

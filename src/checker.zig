@@ -58,14 +58,24 @@ const CheckedExpressionData = union(enum) {
     Block: std.ArrayList(*CheckedStatement),
 };
 
+const Type = union(enum) {
+    Named: []const u8,
+    Function: struct {
+        parameters: []TypeId,
+        returnType: TypeId,
+    },
+};
+
 const Scope = struct {
     variables: std.StringHashMap(TypeId),
     types: std.StringHashMap(TypeId),
+    types_array: std.ArrayList(Type),
 
     pub fn init(alloc: std.mem.Allocator) !Scope {
         return Scope{
             .variables = std.StringHashMap(TypeId).init(alloc),
             .types = std.StringHashMap(TypeId).init(alloc),
+            .types_array = std.ArrayList(Type).init(alloc),
         };
     }
 
@@ -78,7 +88,6 @@ const Scope = struct {
 pub const Checker = struct {
     alloc: std.mem.Allocator,
     statements: []*ast.Statement,
-    types: std.ArrayList([]const u8),
     scopes: std.ArrayList(Scope),
     source: []const u8,
 
@@ -91,24 +100,16 @@ pub const Checker = struct {
 
         try scopes.append(try Scope.init(alloc));
 
-        var types = std.ArrayList([]const u8).init(alloc);
-        errdefer types.deinit();
-
-        try types.append("Empty");
-        try types.append("Int");
-        try types.append("Bool");
-
         var c = Checker{
             .alloc = alloc,
             .statements = stmts,
-            .types = types,
             .scopes = scopes,
             .source = source,
         };
 
-        try c.declareType("Empty", EMPTY_TYPE_ID);
-        try c.declareType("Int", INT_TYPE_ID);
-        try c.declareType("Bool", BOOL_TYPE_ID);
+        _ = try c.declareType(.{ .Named = "Empty" });
+        _ = try c.declareType(.{ .Named = "Int" });
+        _ = try c.declareType(.{ .Named = "Bool" });
 
         return c;
     }
@@ -132,7 +133,7 @@ pub const Checker = struct {
         return null;
     }
 
-    fn currentScope(self: *Checker) *Scope {
+    fn currentScope(self: *const Checker) *Scope {
         return &self.scopes.items[self.scopes.items.len - 1];
     }
 
@@ -147,21 +148,43 @@ pub const Checker = struct {
         _ = self.scopes.pop();
     }
 
-    fn declareType(self: *Checker, name: []const u8, id: TypeId) !void {
+    fn declareType(self: *Checker, ty: Type) !TypeId {
         const scope = self.currentScope();
-        if (scope.types.get(name) != null) {
-            std.debug.print("Type `{s}` already declared\n", .{name});
-            return error.TypeAlreadyDeclared;
+        const id = scope.types_array.items.len;
+        // std.debug.print("Declaring type `{s}` with id {d}\n", .{ ty.Named, id });
+        // if (scope.types.get(name) != null) {
+        //     std.debug.print("Type `{s}` already declared\n", .{name});
+        //     return error.TypeAlreadyDeclared;
+        // }
+
+        if (std.meta.activeTag(ty) == .Named) try scope.types.put(ty.Named, id);
+        try scope.types_array.append(ty);
+
+        return id;
+    }
+
+    // NOTE: why did i write this???
+    fn indexOfType(scope: *Scope, name_: []const u8) ?usize {
+        for (scope.*.types_array.items, 0..) |typ, i| {
+            switch (typ) {
+                .Named => |name| {
+                    if (std.mem.eql(u8, name, name_)) {
+                        std.debug.print("Looking for `{s}` in scope, found {d}\n", .{ name, i });
+                        return i;
+                    }
+                },
+                .Function => |_| {}, // TODO: handle function types
+            }
         }
-        try scope.types.put(name, id);
+        return null;
     }
 
     fn lookupType(self: *const Checker, name_: ?[]const u8) ?TypeId {
         if (name_) |name| {
             for (self.scopes.items) |*scope| {
-                if (scope.types.get(name) != null) {
-                    return scope.types.get(name);
-                }
+                _ = indexOfType(scope, name);
+
+                return scope.types.get(name) orelse null;
             }
         }
         return null;
@@ -177,7 +200,8 @@ pub const Checker = struct {
     }
 
     fn lookupVar(self: *const Checker, name: []const u8) ?TypeId {
-        for (self.scopes.items) |*scope| {
+        for (0..self.scopes.items.len) |i| {
+            const scope = self.scopes.items[self.scopes.items.len - i - 1];
             if (scope.variables.get(name) != null) {
                 return scope.variables.get(name);
             }
@@ -216,6 +240,11 @@ pub const Checker = struct {
                 }
 
                 const value = try self.checkExpression(varDecl.value, expectedType);
+                if (self.lookupType(varDecl.name)) |ty| {
+                    // TODO: remove this unwrap
+                    std.debug.print("Variable has the same name as type `{s}` at {s}", .{ self.typeNameFromId(ty).?, stmt.*.span });
+                    return error.VariableAlreadyDeclared;
+                }
                 try self.declareVar(varDecl.name, value.typeId);
                 expr = try self.typedExpression(.{
                     .VariableDeclaration = .{
@@ -440,7 +469,22 @@ pub const Checker = struct {
             return error.FunctionReturnTypeMismatch;
         }
 
+        var paramTypeIds = std.ArrayList(TypeId).init(self.alloc);
+        const returnTypeId: TypeId = returnType orelse lastStmtTypeId;
+
+        // defer paramTypeIds.deinit();
+
+        for (params.items) |param| {
+            std.debug.print("Parameter `{s}` s\n", .{param.name});
+            try paramTypeIds.append(param.*.typeId);
+        }
+
         self.popScope();
+
+        const t_id = try self.declareType(.{ .Function = .{
+            .parameters = paramTypeIds.items,
+            .returnType = returnTypeId,
+        } });
 
         // NOTE: Hack here
         return self.typedExpression(
@@ -450,7 +494,7 @@ pub const Checker = struct {
                 .body = body,
             } },
             expr.*.span,
-            EMPTY_TYPE_ID,
+            t_id,
             typeHint,
         );
     }
@@ -463,7 +507,9 @@ pub const Checker = struct {
         typeHint: ?TypeId,
     ) !*CheckedExpression {
         if (typeHint != null and resType != typeHint) {
-            std.debug.print("Type mismatch: expected type {s}, got {s} at {s}\n", .{ self.typeNameFromId(typeHint.?).?, self.typeNameFromId(resType).?, span });
+            // std.debug.print("Type mismatch: expected type {s}, got {s} at {s}\n", .{ self.typeNameFromId(typeHint.?).?, self.typeNameFromId(resType).?, span });
+            std.debug.print("Type mismatch: expected type {d}, got {d} at {s}\n", .{ typeHint.?, resType, span });
+
             return error.TypeMismatch;
         } else {
             return self.makePointer(CheckedExpression, CheckedExpression{

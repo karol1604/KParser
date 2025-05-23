@@ -141,7 +141,7 @@ pub const Parser = struct {
             .Eof => {},
             else => {
                 // The expression was parsed, but it's followed by an unexpected token instead of a semicolon or EOF.
-                std.debug.print("Error: Unexpected token at {s}, at {any}\n", .{ self.currentToken().type, self.currentToken().span });
+                std.debug.print("Error: Unexpected token at `{s}` at {any}\n", .{ self.currentToken().type, self.currentToken().span });
                 return error.ExpectedSemicolonOrEofAfterExpression;
             },
         }

@@ -82,6 +82,7 @@ const Scope = struct {
     pub fn deinit(self: *Scope) void {
         self.variables.deinit();
         self.types.deinit();
+        self.types_array.deinit();
     }
 };
 
@@ -163,7 +164,6 @@ pub const Checker = struct {
         return id;
     }
 
-    // NOTE: why did i write this???
     fn indexOfType(scope: *Scope, name_: []const u8) ?usize {
         for (scope.*.types_array.items, 0..) |typ, i| {
             switch (typ) {
@@ -184,6 +184,7 @@ pub const Checker = struct {
             for (self.scopes.items) |*scope| {
                 _ = indexOfType(scope, name);
 
+                // BUG: should be `!= null` instead of `orelse`
                 return scope.types.get(name) orelse null;
             }
         }

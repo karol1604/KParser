@@ -11,13 +11,10 @@ const TokenType = token.TokenType;
 const Span = span.Span;
 const Location = span.Location;
 
-const Diagnostic = diagnostics.Diagnostic;
-
 const Precedence = ast.Precedence;
 const Expression = ast.Expression;
 const BinaryOperator = ast.BinaryOperator;
 const UnaryOperator = ast.UnaryOperator;
-const Statement = ast.Statement;
 const FunctionParameter = ast.FunctionParameter;
 
 pub const Parser = struct {
@@ -43,88 +40,19 @@ pub const Parser = struct {
         return ptr;
     }
 
-    fn makeExpressionPointer(self: *const Parser, expr: Expression) !*Expression {
-        const ptr = try self.alloc.create(Expression);
-        ptr.* = expr;
-        return ptr;
-    }
-
-    fn makeStatementPointer(self: *const Parser, stmt: Statement) !*Statement {
-        const ptr = try self.alloc.create(Statement);
-        ptr.* = stmt;
-        return ptr;
-    }
-
-    pub fn parse(self: *Parser) !std.ArrayList(*Statement) {
-        var statements = std.ArrayList(*Statement).init(self.alloc);
-        errdefer statements.deinit();
+    pub fn parse(self: *Parser) !std.ArrayList(*Expression) {
+        var expressions = std.ArrayList(*Expression).init(self.alloc);
+        errdefer expressions.deinit();
 
         while (self.currentToken().type != .Eof) {
-            const stmt = try self.parseStatement();
-            try statements.append(stmt);
+            const expr = try self.parseExpressionStatement();
+            try expressions.append(expr);
         }
 
-        return statements;
+        return expressions;
     }
 
-    fn parseStatement(self: *Parser) !*Statement {
-        return switch (self.currentToken().type) {
-            .KeywordLet => self.parseVariableDeclaration(),
-            else => self.parseExpressionStatement(),
-        };
-    }
-
-    fn parseVariableDeclaration(self: *Parser) !*Statement {
-        const startSpan = self.currentToken().span;
-        self.advance(); // consume let
-
-        const name = try self.expectIdent();
-        try self.expectToken(.Colon);
-
-        var ty: ?[]const u8 = null;
-
-        if (self.currentToken().type == .Identifier) {
-            ty = try self.expectIdent();
-        }
-
-        try self.expectToken(.Equal);
-        const val = try self.parseExpression(.Lowest);
-
-        var endSpan = val.span;
-
-        switch (self.currentToken().type) {
-            .Semicolon => {
-                endSpan = self.currentToken().span;
-                self.advance(); // Consume the semicolon
-            },
-            else => {
-                std.debug.print(
-                    "Error: Expected semicolon or EOF after let statement value at {any}\n",
-                    .{self.currentToken().span},
-                );
-
-                // try self.diagnostics.append(
-                // Diagnostic{
-                //     .kind = .ParserError,
-                //     .message = "Expected semicolon or EOF after let statement value",
-                //     .span = self.currentToken().span,
-                // },
-                // );
-
-                return error.ExpectedSemicolonOrEofAfterExpression;
-            },
-        }
-        return self.makeStatementPointer(Statement{
-            .kind = .{ .VariableDeclaration = .{
-                .name = name,
-                .value = val,
-                .type = ty,
-            } },
-            .span = Span.join(startSpan, endSpan),
-        });
-    }
-
-    fn parseExpressionStatement(self: *Parser) !*Statement {
+    fn parseExpressionStatement(self: *Parser) !*Expression {
         const expr = try self.parseExpression(.Lowest);
         const startSpan = expr.span;
         var endSpan = startSpan;
@@ -146,17 +74,41 @@ pub const Parser = struct {
             },
         }
 
-        const stmt = Statement{
-            .kind = .{ .ExpressionStatement = expr },
+        return try self.makePointer(Expression, .{ .kind = expr.*.kind, .span = Span.join(startSpan, endSpan) });
+    }
+
+    fn parseVariableDeclaration(self: *Parser) !*Expression {
+        const startSpan = self.currentToken().span;
+        self.advance(); // consume let
+
+        const name = try self.expectIdent();
+        try self.expectToken(.Colon);
+
+        var ty: ?[]const u8 = null;
+
+        if (self.currentToken().type == .Identifier) {
+            ty = try self.expectIdent();
+        }
+
+        try self.expectToken(.Equal);
+        const val = try self.parseExpression(.Lowest);
+
+        const endSpan = val.span;
+
+        return self.makePointer(Expression, .{
+            .kind = .{ .VariableDeclaration = .{
+                .name = name,
+                .value = val,
+                .type = ty,
+            } },
             .span = Span.join(startSpan, endSpan),
-        };
-        return try self.makeStatementPointer(stmt);
+        });
     }
 
     fn parseVariableIdentifier(self: *Parser) !*Expression {
         const start_span = self.currentToken().span;
         const ident = try self.expectIdent();
-        return self.makeExpressionPointer(.{
+        return self.makePointer(Expression, .{
             .kind = .{ .Identifier = ident },
             .span = Span.join(start_span, start_span),
         });
@@ -198,28 +150,15 @@ pub const Parser = struct {
         }
 
         try self.expectToken(.RightArrow);
-        // try self.expectToken(.LBrace);
-
-        // var body = std.ArrayList(*Statement).init(self.alloc);
-        //
-        // while (self.currentToken().type != .RBrace) {
-        //     const stmt = try self.parseStatement();
-        //     // std.debug.print(">>>>>>>>>>>>>>>> STATEMENT `{any}` \n\n", .{stmt.*.kind.ExpressionStatement.*.span});
-        //     try body.append(stmt);
-        // }
-        //
-        // const endSpan = self.currentToken().span;
-        //
-        // try self.expectToken(.RBrace);
 
         if (self.currentToken().type != .LBrace) {
             // NOTE: dont know about this one
             const bodyExpr = try self.parseExpression(.Lowest);
             const endSpan = bodyExpr.*.span;
 
-            var b = std.ArrayList(*Statement).init(self.alloc);
-            try b.append(try self.makeStatementPointer(Statement{
-                .kind = .{ .ExpressionStatement = bodyExpr },
+            var b = std.ArrayList(*Expression).init(self.alloc);
+            try b.append(try self.makePointer(Expression, .{
+                .kind = bodyExpr.*.kind,
                 .span = bodyExpr.*.span,
             }));
 
@@ -250,10 +189,10 @@ pub const Parser = struct {
         const startSpan = self.currentToken().span;
         try self.expectToken(.LBrace); // consume '{'
 
-        var statements = std.ArrayList(*Statement).init(self.alloc);
+        var expressions = std.ArrayList(*Expression).init(self.alloc);
         while (self.currentToken().type != .RBrace) {
-            const stmt = try self.parseStatement();
-            try statements.append(stmt);
+            const expr = try self.parseExpressionStatement();
+            try expressions.append(expr);
         }
 
         const endSpan = self.currentToken().span;
@@ -261,7 +200,7 @@ pub const Parser = struct {
         try self.expectToken(.RBrace); // consume '}'
 
         return self.makePointer(Expression, .{
-            .kind = .{ .Block = .{ .body = statements } },
+            .kind = .{ .Block = .{ .body = expressions } },
             .span = Span.join(startSpan, endSpan),
         });
     }
@@ -274,6 +213,7 @@ pub const Parser = struct {
             .Plus, .Minus, .Bang => try self.parseUnaryExpression(),
             .Identifier => try self.parseVariableIdentifier(),
             .KeywordFn => try self.parseFunctionDeclaration(),
+            .KeywordLet => try self.parseVariableDeclaration(),
             // NOTE: Not sure if this is the right place for this
             .LBrace => try self.parseBlockExpression(),
             else => {
@@ -291,12 +231,6 @@ pub const Parser = struct {
             if (semanticOp == null) {
                 return expr;
             }
-            // Check for the consecutive integers bug more directly
-            // This check should ideally be before trying to parse a binary operator
-            // if (operatorType == .IntLiteral) { // This was the original TODO
-            //     std.debug.print("Error: Consecutive integer literals without operator at {any}\n", .{self.currentToken().span});
-            //     return error.ConsecutiveInts;
-            // }
 
             expr = try self.parseBinaryExpression(expr, semanticOp.?, self.getTokenPrec(operatorType));
         }
@@ -343,7 +277,7 @@ pub const Parser = struct {
 
         const rhs = try self.parseExpression(.Prefix);
 
-        return self.makeExpressionPointer(.{
+        return self.makePointer(Expression, .{
             .kind = .{ .Unary = .{ .operator = op, .right = rhs } },
             .span = Span.join(opToken.span, rhs.span),
         });
@@ -370,6 +304,7 @@ pub const Parser = struct {
         self.advance();
 
         // TODO: this is a hack, we should change this function's implementation. Maybe add a `allowPrefix` parameter?
+
         // if (self.currentToken().type == .Plus or self.currentToken().type == .Minus or self.currentToken().type == .Bang) {
         //     return error.UnexpectedUnaryOperator;
         // }
@@ -383,7 +318,7 @@ pub const Parser = struct {
         const rhs = try self.parseExpression(@as(Precedence, @enumFromInt(rightPrecAdjust)));
 
         const exprSpan = Span.join(lhs.span, rhs.span);
-        return self.makeExpressionPointer(.{
+        return self.makePointer(Expression, .{
             .kind = .{ .Binary = .{
                 .left = lhs,
                 .operator = op,
@@ -414,23 +349,6 @@ pub const Parser = struct {
         }
     }
 
-    // TODO: REMOVE THIS FUNCTION
-    fn expectInt(self: *Parser) !i64 {
-        const current = self.currentToken();
-        switch (self.currentToken().type) {
-            .IntLiteral => |int| {
-                self.advance();
-                return int;
-            },
-            else => {
-                std.debug.print("Error: Expected int literal but got {any} at {any}\n", .{
-                    current.type, current.span,
-                });
-                return error.ExpectedInt;
-            },
-        }
-    }
-
     fn parseBoolLiteral(self: *Parser) !*Expression {
         const boolToken = self.currentToken();
         const value = switch (boolToken.type) {
@@ -441,7 +359,7 @@ pub const Parser = struct {
 
         self.advance();
 
-        return self.makeExpressionPointer(.{
+        return self.makePointer(Expression, .{
             .kind = .{ .BoolLiteral = value },
             .span = boolToken.span,
         });
@@ -456,7 +374,7 @@ pub const Parser = struct {
         };
 
         self.advance();
-        return try self.makeExpressionPointer(.{
+        return try self.makePointer(Expression, .{
             .kind = .{ .IntLiteral = value },
             .span = intToken.span,
         });
@@ -469,13 +387,6 @@ pub const Parser = struct {
     }
 
     fn currentToken(self: *Parser) Token {
-        // if (self.current >= self.tokens.len) {
-        //     const tokSpan = Span{
-        //         .start = Location{ .line = self.line, .column = 0, .offset = 0 },
-        //         .end = Location{ .line = self.line, .column = 0, .offset = 0 },
-        //     };
-        //     return Token{ .type = .Eof, .span = tokSpan };
-        // }
         return self.tokens[self.current];
     }
 

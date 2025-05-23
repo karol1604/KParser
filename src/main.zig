@@ -240,16 +240,16 @@ test "read from file" {
     std.debug.print("---------\n", .{});
     for (t.items) |item| {
         std.debug.print("   ", .{});
-        try utils.prettyPrintStatement(item.*);
+        utils.prettyPrintExpression(item.*);
         std.debug.print("---------\n", .{});
     }
 
     var check = try checker.Checker.init(arenaAlloc, t.items, source);
     const cs = try check.check();
     for (cs.items) |item| {
-        utils.prettyPrintCheckedExpression(item.*.expr.*);
+        utils.prettyPrintCheckedExpression(item.*);
         std.debug.print("---------\n", .{});
     }
 
-    std.debug.print("{any}\n", .{check.scopes.items[0].types_array.items[3].Function});
+    // std.debug.print("{any}\n", .{check.scopes.items[0].types_array.items[3].Function});
 }

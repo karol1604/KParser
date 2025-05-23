@@ -134,13 +134,13 @@ fn prettyPrintRecCheck(
             std.debug.print(" -> {d}\n", .{decl.returnType});
             // std.debug.print("   {d} statements\n", .{decl.body.items.len});
             for (decl.body.items, 0..) |stmt, i| {
-                prettyPrintRecCheck(stmt.*.expr.*, depth + 1, treeLines, i == decl.body.items.len - 1);
+                prettyPrintRecCheck(stmt.*, depth + 1, treeLines, i == decl.body.items.len - 1);
             }
         },
         .Block => |block| {
-            std.debug.print("Block ({d} statements)\n", .{block.items.len});
+            std.debug.print("Block ({d} expressions)\n", .{block.items.len});
             for (block.items, 0..) |stmt, i| {
-                prettyPrintRecCheck(stmt.*.expr.*, depth + 1, treeLines, i == block.items.len - 1);
+                prettyPrintRecCheck(stmt.*, depth + 1, treeLines, i == block.items.len - 1);
             }
         },
         // else => {},
@@ -148,21 +148,21 @@ fn prettyPrintRecCheck(
 }
 
 // ********* EXPRESSION TREE PRETTY PRINTING *********
-pub fn prettyPrintStatement(stmt: ast.Statement) !void {
-    try switch (stmt.kind) {
-        .ExpressionStatement => |expr| prettyPrintExpression(expr.*),
-        .VariableDeclaration => |statement| {
-            if (statement.type) |ty| {
-                std.debug.print("VariableDecl {s} ({s}) =\n", .{ statement.name, ty });
-            } else {
-                std.debug.print("VariableDecl {s} =\n", .{statement.name});
-            }
-            std.debug.print("   ", .{});
-            prettyPrintExpression(statement.value.*);
-        },
-        else => error.NoPrettyPrintForStatementType,
-    };
-}
+// pub fn prettyPrintStatement(stmt: ast.Statement) !void {
+//     try switch (stmt.kind) {
+//         .ExpressionStatement => |expr| prettyPrintExpression(expr.*),
+//         .VariableDeclaration => |statement| {
+//             if (statement.type) |ty| {
+//                 std.debug.print("VariableDecl {s} ({s}) =\n", .{ statement.name, ty });
+//             } else {
+//                 std.debug.print("VariableDecl {s} =\n", .{statement.name});
+//             }
+//             std.debug.print("   ", .{});
+//             prettyPrintExpression(statement.value.*);
+//         },
+//         else => error.NoPrettyPrintForStatementType,
+//     };
+// }
 /// Pretty prints an expression tree
 pub fn prettyPrintExpression(expr: ast.Expression) void {
     var treeLines: [MAX_DEPTH]bool = undefined;
@@ -214,7 +214,7 @@ fn prettyPrintRec(
             } else {
                 std.debug.print("\n", .{});
             }
-            std.debug.print("   {d} statements\n", .{decl.body.items.len});
+            std.debug.print("   {d} expressions\n", .{decl.body.items.len});
         },
         .Unary => |u| {
             const opStr = switch (u.operator) {
@@ -255,22 +255,20 @@ fn prettyPrintRec(
             prettyPrintRec(b.right.*.kind, depth + 1, treeLines, true);
         },
         .Block => |block| {
-            for (block.body.items) |stmt| {
-                switch (stmt.*.kind) {
-                    .ExpressionStatement => |expr_| {
-                        // std.debug.print("   ExpressionStatement\n", .{});
-                        // prettyPrintRec(expr_.*.kind, depth + 1, treeLines, true);
-                        prettyPrintExpression(expr_.*);
-                    },
-                    .VariableDeclaration => |varDecl| {
-                        // std.debug.print("   VariableDecl {s}\n", .{varDecl.name});
-                        // prettyPrintRec(varDecl.value.*.kind, depth + 1, treeLines, true);
-                        prettyPrintExpression(varDecl.value.*);
-                    },
-                    else => {},
-                }
+            for (block.body.items) |expr_| {
+                prettyPrintExpression(expr_.*);
             }
         },
+        .VariableDeclaration => |statement| {
+            if (statement.type) |ty| {
+                std.debug.print("VariableDecl {s} ({s}) =\n", .{ statement.name, ty });
+            } else {
+                std.debug.print("VariableDecl {s} =\n", .{statement.name});
+            }
+            std.debug.print("   ", .{});
+            prettyPrintExpression(statement.value.*);
+        },
+
         // else => {},
     }
 }

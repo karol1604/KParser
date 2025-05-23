@@ -3,27 +3,27 @@ const span = @import("span.zig");
 
 const Span = span.Span;
 
-pub const Statement = struct {
-    kind: StatementKind,
-    span: Span,
-};
-
-pub const StatementKind = union(enum) {
-    ExpressionStatement: *const Expression,
-
-    VariableDeclaration: struct {
-        name: []const u8,
-        value: *const Expression,
-        type: ?[]const u8,
-    },
-
-    ReturnStatement: struct {
-        implicit: bool,
-        value: *const Expression,
-    },
-
-    // etc
-};
+// pub const Statement = struct {
+//     kind: StatementKind,
+//     span: Span,
+// };
+//
+// pub const StatementKind = union(enum) {
+//     ExpressionStatement: *const Expression,
+//
+//     VariableDeclaration: struct {
+//         name: []const u8,
+//         value: *const Expression,
+//         type: ?[]const u8,
+//     },
+//
+//     ReturnStatement: struct {
+//         implicit: bool,
+//         value: *const Expression,
+//     },
+//
+//     // etc
+// };
 
 pub const FunctionParameter = struct {
     name: []const u8,
@@ -56,11 +56,17 @@ pub const ExpressionKind = union(enum) {
     FunctionDeclaration: struct {
         parameters: std.ArrayList(*FunctionParameter),
         returnType: ?*const Expression,
-        body: std.ArrayList(*Statement),
+        body: std.ArrayList(*Expression),
+    },
+
+    VariableDeclaration: struct {
+        name: []const u8,
+        value: *const Expression,
+        type: ?[]const u8,
     },
 
     Block: struct {
-        body: std.ArrayList(*Statement),
+        body: std.ArrayList(*Expression),
     },
 };
 

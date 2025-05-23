@@ -14,10 +14,6 @@ const EMPTY_TYPE_ID: TypeId = 0;
 const INT_TYPE_ID: TypeId = 1;
 const BOOL_TYPE_ID: TypeId = 2;
 
-const CheckedStatement = struct {
-    expr: *const CheckedExpression,
-};
-
 pub const CheckedExpression = struct {
     typeId: TypeId,
     data: CheckedExpressionData,
@@ -52,10 +48,10 @@ const CheckedExpressionData = union(enum) {
     FunctionDeclaration: struct {
         parameters: std.ArrayList(*CheckedFunctionParameter),
         returnType: TypeId,
-        body: std.ArrayList(*CheckedStatement),
+        body: std.ArrayList(*CheckedExpression),
     },
 
-    Block: std.ArrayList(*CheckedStatement),
+    Block: std.ArrayList(*CheckedExpression),
 };
 
 const Type = union(enum) {
@@ -88,11 +84,11 @@ const Scope = struct {
 
 pub const Checker = struct {
     alloc: std.mem.Allocator,
-    statements: []*ast.Statement,
+    expressions: []*ast.Expression,
     scopes: std.ArrayList(Scope),
     source: []const u8,
 
-    pub fn init(alloc: std.mem.Allocator, stmts: []*ast.Statement, source: []const u8) !Checker {
+    pub fn init(alloc: std.mem.Allocator, exprs: []*ast.Expression, source: []const u8) !Checker {
         var scopes = std.ArrayList(Scope).init(alloc);
         errdefer {
             for (scopes.items) |*scope| scope.deinit();
@@ -103,7 +99,7 @@ pub const Checker = struct {
 
         var c = Checker{
             .alloc = alloc,
-            .statements = stmts,
+            .expressions = exprs,
             .scopes = scopes,
             .source = source,
         };
@@ -210,56 +206,17 @@ pub const Checker = struct {
         return null;
     }
 
-    pub fn check(self: *Checker) !std.ArrayList(*CheckedStatement) {
-        var checkedStatements = std.ArrayList(*CheckedStatement).init(self.alloc);
-        errdefer checkedStatements.deinit();
+    pub fn check(self: *Checker) !std.ArrayList(*CheckedExpression) {
+        var checkedExpressions = std.ArrayList(*CheckedExpression).init(self.alloc);
+        errdefer checkedExpressions.deinit();
 
-        for (self.statements) |stmt| {
-            const checkedStmt = try self.checkStatement(stmt);
-            try checkedStatements.append(checkedStmt);
+        for (self.expressions) |expr| {
+            const checkedExpr = try self.checkExpression(expr, null);
+            try checkedExpressions.append(checkedExpr);
             // Do something with checkedStmt
         }
 
-        return checkedStatements;
-    }
-
-    fn checkStatement(self: *Checker, stmt: *const ast.Statement) !*CheckedStatement {
-        var expr: *const CheckedExpression = undefined;
-        switch (stmt.*.kind) {
-            ast.StatementKind.ExpressionStatement => |exprStmt| {
-                expr = try self.checkExpression(exprStmt, null);
-            },
-            ast.StatementKind.VariableDeclaration => |varDecl| {
-                const expectedType = self.lookupType(varDecl.type);
-
-                // really?
-                if (expectedType == null) {
-                    if (varDecl.type) |typeName| {
-                        std.debug.print("Unknown type `{s}` at {any}\n", .{ typeName, stmt.*.span });
-                        return error.UnknownType;
-                    }
-                }
-
-                const value = try self.checkExpression(varDecl.value, expectedType);
-                if (self.lookupType(varDecl.name)) |ty| {
-                    // TODO: remove this unwrap
-                    std.debug.print("Variable has the same name as type `{s}` at {s}", .{ self.typeNameFromId(ty).?, stmt.*.span });
-                    return error.VariableAlreadyDeclared;
-                }
-                try self.declareVar(varDecl.name, value.typeId);
-                expr = try self.typedExpression(.{
-                    .VariableDeclaration = .{
-                        .name = varDecl.name,
-                        .value = value,
-                    },
-                }, stmt.*.span, EMPTY_TYPE_ID, null);
-            },
-            else => return error.NotYetImplemented,
-        }
-
-        return try self.makePointer(CheckedStatement, CheckedStatement{
-            .expr = expr,
-        });
+        return checkedExpressions;
     }
 
     fn checkExpression(self: *Checker, expr: *const ast.Expression, typeHint: ?TypeId) anyerror!*CheckedExpression {
@@ -271,6 +228,7 @@ pub const Checker = struct {
             .Unary => return try self.checkUnaryExpression(expr, typeHint),
             .Binary => return try self.checkBinaryExpression(expr, typeHint),
             .Block => return try self.checkBlockExpression(expr, typeHint),
+            .VariableDeclaration => return try self.checkVariableDeclaration(expr),
             // else => {
             //     std.debug.print("Unknown expression type \n", .{});
             //     return error.UnknownExpressionType;
@@ -293,6 +251,33 @@ pub const Checker = struct {
         }
     }
 
+    fn checkVariableDeclaration(self: *Checker, expr: *const ast.Expression) !*CheckedExpression {
+        const varDecl = expr.*.kind.VariableDeclaration;
+        const expectedType = self.lookupType(varDecl.type);
+
+        // really?
+        if (expectedType == null) {
+            if (varDecl.type) |typeName| {
+                std.debug.print("Unknown type `{s}` at {any}\n", .{ typeName, expr.*.span });
+                return error.UnknownType;
+            }
+        }
+
+        const value = try self.checkExpression(varDecl.value, expectedType);
+        if (self.lookupType(varDecl.name)) |ty| {
+            // TODO: remove this unwrap
+            std.debug.print("Variable has the same name as type `{s}` at {s}", .{ self.typeNameFromId(ty).?, expr.*.span });
+            return error.VariableAlreadyDeclared;
+        }
+        try self.declareVar(varDecl.name, value.typeId);
+        return try self.typedExpression(.{
+            .VariableDeclaration = .{
+                .name = varDecl.name,
+                .value = value,
+            },
+        }, expr.*.span, EMPTY_TYPE_ID, null);
+    }
+
     fn checkBlockExpression(
         self: *Checker,
         expr: *const ast.Expression,
@@ -300,12 +285,12 @@ pub const Checker = struct {
     ) !*CheckedExpression {
         const block = expr.*.kind.Block;
         try self.pushScope();
-        var body = std.ArrayList(*CheckedStatement).init(self.alloc);
+        var body = std.ArrayList(*CheckedExpression).init(self.alloc);
         errdefer body.deinit();
 
         for (block.body.items) |stmt| {
-            const checkedStmt = try self.checkStatement(stmt);
-            try body.append(checkedStmt);
+            const checkedExpr = try self.checkExpression(stmt, null);
+            try body.append(checkedExpr);
         }
 
         if (body.items.len == 0) {
@@ -436,7 +421,7 @@ pub const Checker = struct {
         const decl = expr.*.kind.FunctionDeclaration;
         const returnType = if (decl.returnType) |ty| self.lookupType(ty.*.kind.Identifier) else null;
         var params = std.ArrayList(*CheckedFunctionParameter).init(self.alloc);
-        var body = std.ArrayList(*CheckedStatement).init(self.alloc);
+        var body = std.ArrayList(*CheckedExpression).init(self.alloc);
 
         try self.pushScope();
 
@@ -454,24 +439,24 @@ pub const Checker = struct {
         }
 
         for (decl.body.items) |stmt| {
-            const checkedStmt = try self.checkStatement(stmt);
-            try body.append(checkedStmt);
+            const checkedExpr = try self.checkExpression(stmt, null);
+            try body.append(checkedExpr);
         }
 
         if (body.items.len == 0) {
             std.debug.print("Function body is empty at {any}\n", .{expr.*.span});
             return error.FunctionBodyEmpty;
         }
-        const lastStmtTypeId = body.items[body.items.len - 1].*.expr.*.typeId;
-        if (returnType != null and returnType != lastStmtTypeId) {
+        const lastExprTypeId = body.items[body.items.len - 1].*.typeId;
+        if (returnType != null and returnType != lastExprTypeId) {
             // std.debug.print("Type mismatch: Function return type marked as `{s}` but returns `{s}` at {any}\n", .{ self.typeNameFromId(returnType.?).?, self.typeNameFromId(lastStmtTypeId).?, expr.*.kind.FunctionDeclaration.body.items[body.items.len - 1].*.span });
-            std.debug.print("Type mismatch: Function return type marked as `{s}` but returns `{s}` at {any}\n", .{ self.typeNameFromId(returnType.?).?, self.typeNameFromId(lastStmtTypeId).?, decl.returnType.?.span });
+            std.debug.print("Type mismatch: Function return type marked as `{s}` but returns `{s}` at {any}\n", .{ self.typeNameFromId(returnType.?).?, self.typeNameFromId(lastExprTypeId).?, decl.returnType.?.span });
 
             return error.FunctionReturnTypeMismatch;
         }
 
         var paramTypeIds = std.ArrayList(TypeId).init(self.alloc);
-        const returnTypeId: TypeId = returnType orelse lastStmtTypeId;
+        const returnTypeId: TypeId = returnType orelse lastExprTypeId;
 
         // defer paramTypeIds.deinit();
 
@@ -491,7 +476,7 @@ pub const Checker = struct {
         return self.typedExpression(
             .{ .FunctionDeclaration = .{
                 .parameters = params,
-                .returnType = returnType orelse lastStmtTypeId,
+                .returnType = returnType orelse lastExprTypeId,
                 .body = body,
             } },
             expr.*.span,

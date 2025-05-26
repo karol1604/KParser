@@ -212,7 +212,7 @@ pub const Checker = struct {
         return null;
     }
 
-    pub fn check(self: *Checker) !std.ArrayList(*CheckedExpression) {
+    pub fn check(self: *Checker) ![]*CheckedExpression {
         var checkedExpressions = std.ArrayList(*CheckedExpression).init(self.alloc);
         errdefer checkedExpressions.deinit();
 
@@ -222,7 +222,7 @@ pub const Checker = struct {
             // Do something with checkedStmt
         }
 
-        return checkedExpressions;
+        return checkedExpressions.items;
     }
 
     fn checkExpression(self: *Checker, expr: *const ast.Expression, typeHint: ?TypeId) anyerror!*CheckedExpression {

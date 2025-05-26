@@ -35,6 +35,7 @@ I'm also not sure about the `Checker` implementation. I've never written one bef
 - [ ] Make some kind of `Diagnostic` struct or wtv for error handling bc now it's basically inexistent
 - [ ] Think about types and how should they work
 - [ ] This might be a stretch but i'd like to implement a simple symbolic engine
+- [ ] Redo the type stuff in the `Parser`. Right now, it's just an `Expression` and we assume it's an indent. This is obv not scalable and really bad
 
 ## Syntax (WIP)
 This is the syntax I'd like this language to have. This is subject to change.

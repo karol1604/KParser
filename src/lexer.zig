@@ -48,8 +48,8 @@ pub const Lexer = struct {
         var buf_c: [4]u8 = undefined;
         const utf8_bytes = try utils.encodeCodepointToUtf8(c, &buf_c);
         self.current += utf8_bytes.len;
-        std.debug.print(">>>>>>>> advance on char: {d}:`{s}`\n", .{ c, utf8_bytes });
-        std.debug.print("advancing by {d} bytes\n", .{utf8_bytes.len});
+        // std.debug.print(">>>>>>>> advance on char: {d}:`{s}`\n", .{ c, utf8_bytes });
+        // std.debug.print("advancing by {d} bytes\n", .{utf8_bytes.len});
 
         if (c == '\n') {
             self.line += 1;
@@ -213,7 +213,6 @@ pub const Lexer = struct {
             if (tok) |t| try toks.append(t);
         }
 
-        // try self.addToken(.Eof, Span{ .start = self.currentLocation(), .end = self.currentLocation() });
         try toks.append(.{ .type = .Eof, .span = Span{ .start = self.currentLocation(), .end = self.currentLocation() } });
         return toks.items;
     }

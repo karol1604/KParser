@@ -226,7 +226,7 @@ test "read from file" {
     std.debug.print("{s}*********\nSource:\n{s}**********\n{s}", .{ RED, source, RESET });
 
     var lex = try lexer.Lexer.init(source, arenaAlloc);
-    defer lex.deinit();
+    // defer lex.deinit();
     const tokens = try lex.tokenize();
 
     for (tokens) |tok| {
@@ -234,18 +234,18 @@ test "read from file" {
     }
 
     var p = parser.Parser.init(tokens, arenaAlloc);
-    const parsed_ast = try p.parse();
+    const parsedAst = try p.parse();
 
     std.debug.print("---------\n", .{});
-    for (parsed_ast) |item| {
+    for (parsedAst) |item| {
         std.debug.print("   ", .{});
         utils.prettyPrintExpression(item.*);
         std.debug.print("---------\n", .{});
     }
 
-    var check = try checker.Checker.init(arenaAlloc, parsed_ast, source);
-    const cs = try check.check();
-    for (cs.items) |item| {
+    var check = try checker.Checker.init(arenaAlloc, parsedAst, source);
+    const checkedAst = try check.check();
+    for (checkedAst) |item| {
         utils.prettyPrintCheckedExpression(item.*);
         std.debug.print("---------\n", .{});
     }

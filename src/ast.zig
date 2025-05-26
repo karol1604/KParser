@@ -3,6 +3,15 @@ const span = @import("span.zig");
 
 const Span = span.Span;
 
+// TODO : implement a `Type` struct to represent types in the AST instrad of using strings directly.
+const Type = union(enum) {
+    Identifier: []const u8,
+    Function: struct {
+        parameters: std.ArrayList(Type),
+        returnType: ?Type,
+    },
+};
+
 pub const FunctionParameter = struct {
     name: []const u8,
     type: []const u8,

@@ -16,12 +16,11 @@ let eq := fn(x: ℤ, y: ℤ, z: Bool): Bool -> {
 	ℝ == 11;
 };
 
-let eq2 := fn(x: ℤ, y: ℤ, z: Bool): Int -> {
+let eq2 := fn(x: ℤ, y: ℤ, z: Bool): Bool -> {
     let ℝ := 1;
 	x;
 	z;
 	ℝ == 11;
-	ℝ;
 };
 
 eq;

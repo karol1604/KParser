@@ -104,8 +104,8 @@ pub const Checker = struct {
             .source = source,
         };
 
-        _ = try c.declareType(.{ .Named = "Empty" });
-        _ = try c.declareType(.{ .Named = "Int" });
+        _ = try c.declareType(.{ .Named = "∅" });
+        _ = try c.declareType(.{ .Named = "ℤ" });
         _ = try c.declareType(.{ .Named = "Bool" });
 
         return c;
@@ -160,28 +160,36 @@ pub const Checker = struct {
         return id;
     }
 
-    fn indexOfType(scope: *Scope, name_: []const u8) ?usize {
+    fn indexOfType(scope: *const Scope, name: []const u8) ?usize {
         for (scope.*.types_array.items, 0..) |typ, i| {
             switch (typ) {
-                .Named => |name| {
-                    if (std.mem.eql(u8, name, name_)) {
+                .Named => |n| {
+                    if (std.mem.eql(u8, n, name)) {
                         std.debug.print("Looking for `{s}` in scope, found {d}\n", .{ name, i });
                         return i;
                     }
                 },
-                .Function => |_| {}, // TODO: handle function types
+                .Function => |_| {
+                    // TODO: handle function types
+                },
             }
         }
         return null;
     }
 
+    // TODO: this should take in a `Type` instead of a string
     fn lookupType(self: *const Checker, name_: ?[]const u8) ?TypeId {
         if (name_) |name| {
-            for (self.scopes.items) |*scope| {
-                _ = indexOfType(scope, name);
+            for (0..self.scopes.items.len) |i| {
+                const scope = self.scopes.items[self.scopes.items.len - i - 1];
+                _ = indexOfType(&scope, name);
+                if (scope.types.get(name) != null) {
+                    std.debug.print("INFO:: Found type `{s}` in scope {d} with {d} scopes\n", .{ name, self.scopes.items.len - i - 1, self.scopes.items.len });
+                    return scope.types.get(name);
+                }
 
                 // BUG: should be `!= null` instead of `orelse`
-                return scope.types.get(name) orelse null;
+                // return scope.types.get(name) orelse null;
             }
         }
         return null;
@@ -199,9 +207,7 @@ pub const Checker = struct {
     fn lookupVar(self: *const Checker, name: []const u8) ?TypeId {
         for (0..self.scopes.items.len) |i| {
             const scope = self.scopes.items[self.scopes.items.len - i - 1];
-            if (scope.variables.get(name) != null) {
-                return scope.variables.get(name);
-            }
+            return scope.variables.get(name) orelse continue;
         }
         return null;
     }
@@ -456,6 +462,8 @@ pub const Checker = struct {
         }
 
         var paramTypeIds = std.ArrayList(TypeId).init(self.alloc);
+
+        // BUG: this is bad bc if the type is a random value, it will still take the last statement's type
         const returnTypeId: TypeId = returnType orelse lastExprTypeId;
 
         // defer paramTypeIds.deinit();
@@ -467,6 +475,7 @@ pub const Checker = struct {
 
         self.popScope();
 
+        // TODO: check if type already exists
         const t_id = try self.declareType(.{ .Function = .{
             .parameters = paramTypeIds.items,
             .returnType = returnTypeId,

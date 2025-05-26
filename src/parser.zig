@@ -40,19 +40,19 @@ pub const Parser = struct {
         return ptr;
     }
 
-    pub fn parse(self: *Parser) !std.ArrayList(*Expression) {
+    pub fn parse(self: *Parser) ![]*Expression {
         var expressions = std.ArrayList(*Expression).init(self.alloc);
         errdefer expressions.deinit();
 
         while (self.currentToken().type != .Eof) {
-            const expr = try self.parseExpressionStatement();
+            const expr = try self.parseTopLevelExpression();
             try expressions.append(expr);
         }
 
-        return expressions;
+        return expressions.items;
     }
 
-    fn parseExpressionStatement(self: *Parser) !*Expression {
+    fn parseTopLevelExpression(self: *Parser) !*Expression {
         const expr = try self.parseExpression(.Lowest);
         const startSpan = expr.span;
         var endSpan = startSpan;
@@ -74,7 +74,10 @@ pub const Parser = struct {
             },
         }
 
-        return try self.makePointer(Expression, .{ .kind = expr.*.kind, .span = Span.join(startSpan, endSpan) });
+        return try self.makePointer(Expression, .{
+            .kind = expr.*.kind,
+            .span = Span.join(startSpan, endSpan),
+        });
     }
 
     fn parseVariableDeclaration(self: *Parser) !*Expression {
@@ -114,7 +117,7 @@ pub const Parser = struct {
         });
     }
 
-    fn parseFunctionParameter(self: *Parser) !*FunctionParameter {
+    fn parseFunctionParameter(self: *Parser) !*const FunctionParameter {
         const name = try self.expectIdent();
         try self.expectToken(.Colon);
         const ty = try self.expectIdent();
@@ -130,7 +133,7 @@ pub const Parser = struct {
         self.advance(); // consume fn
         try self.expectToken(.LParen);
 
-        var params = std.ArrayList(*FunctionParameter).init(self.alloc);
+        var params = std.ArrayList(*const FunctionParameter).init(self.alloc);
         while (self.peek().type != .RParen) {
             try params.append(try self.parseFunctionParameter());
             if (self.currentToken().type == .Comma) try self.expectToken(.Comma) else break;
@@ -191,7 +194,7 @@ pub const Parser = struct {
 
         var expressions = std.ArrayList(*Expression).init(self.alloc);
         while (self.currentToken().type != .RBrace) {
-            const expr = try self.parseExpressionStatement();
+            const expr = try self.parseTopLevelExpression();
             try expressions.append(expr);
         }
 
@@ -374,6 +377,7 @@ pub const Parser = struct {
         };
 
         self.advance();
+
         return try self.makePointer(Expression, .{
             .kind = .{ .IntLiteral = value },
             .span = intToken.span,
@@ -421,7 +425,7 @@ pub const Parser = struct {
 
             .LParen => .Group,
 
-            else => Precedence.Lowest,
+            else => .Lowest,
         };
     }
 

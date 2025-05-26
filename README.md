@@ -25,12 +25,13 @@ Please ignore the error handling code. It's quite annoying to make good errors i
 I'm also not sure about the `Checker` implementation. I've never written one before and the sheer amount of design decisions to make overwhelm me. I'm probably gonna iterate and refactor it a LOT of times.
 
 ## Bugs
-- [ ] we are not properly assigning a type to a variable which is a function
+- [ ] apparantly, putting a random string as a return type of a function is allowed in this language...
 - [ ] we still can't parse expressions like `1 == -1` bc of a hack in the `Parser`. We either parse them and allow expressions like `1 +- 1` or just don't parse them at all. Gotta think about this one
 - this shit is prolly riddled with even more bugs tbh
 
 ## Todo
-- [ ] Remove `Statement` as everything is an expression now
+- [x] Remove `Statement` as everything is an expression now
+- [ ] add a `typeErrors` field in the `Checker` so that it can collect all of them instead of stopping execution on the first one
 - [ ] Make some kind of `Diagnostic` struct or wtv for error handling bc now it's basically inexistent
 - [ ] Think about types and how should they work
 - [ ] This might be a stretch but i'd like to implement a simple symbolic engine

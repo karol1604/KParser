@@ -147,22 +147,6 @@ fn prettyPrintRecCheck(
     }
 }
 
-// ********* EXPRESSION TREE PRETTY PRINTING *********
-// pub fn prettyPrintStatement(stmt: ast.Statement) !void {
-//     try switch (stmt.kind) {
-//         .ExpressionStatement => |expr| prettyPrintExpression(expr.*),
-//         .VariableDeclaration => |statement| {
-//             if (statement.type) |ty| {
-//                 std.debug.print("VariableDecl {s} ({s}) =\n", .{ statement.name, ty });
-//             } else {
-//                 std.debug.print("VariableDecl {s} =\n", .{statement.name});
-//             }
-//             std.debug.print("   ", .{});
-//             prettyPrintExpression(statement.value.*);
-//         },
-//         else => error.NoPrettyPrintForStatementType,
-//     };
-// }
 /// Pretty prints an expression tree
 pub fn prettyPrintExpression(expr: ast.Expression) void {
     var treeLines: [MAX_DEPTH]bool = undefined;
